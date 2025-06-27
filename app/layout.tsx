@@ -1,6 +1,6 @@
 import "./globals.css";
 import { ReactNode } from "react";
-import { Providers } from "./components/Provider";
+import { Providers } from "./components/home/Provider";
 
 export const metadata = {
   title: "PCD Manager",

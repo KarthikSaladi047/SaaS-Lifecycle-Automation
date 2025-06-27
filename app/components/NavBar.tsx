@@ -8,12 +8,14 @@ interface NavBarProps {
   isControlPanel: boolean;
   selectedEnv?: string;
   onEnvChange?: (env: string) => void;
+  loading?: boolean;
 }
 
 export default function NavBar({
   isControlPanel,
   selectedEnv,
   onEnvChange,
+  loading = false,
 }: NavBarProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -104,16 +106,20 @@ export default function NavBar({
                 {envList.map((env) => (
                   <button
                     key={env}
-                    className={`relative cursor-pointer transition duration-200 ease-in-out px-2 py-1 font-medium
+                    disabled={loading}
+                    className={`relative transition duration-200 ease-in-out px-2 py-1 font-medium
+                      ${loading ? "opacity-50 cursor-not-allowed" : ""}
                       after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-0.5 after:w-full after:transition-all
                       ${
                         selectedEnv === env
                           ? "text-yellow-400 after:bg-yellow-400"
-                          : "hover:text-yellow-300 after:bg-transparent hover:after:bg-yellow-300"
+                          : "hover:text-green-300 after:bg-transparent hover:after:bg-green-300"
                       }`}
-                    onClick={() => onEnvChange?.(env)}
+                    onClick={() => {
+                      if (!loading) onEnvChange?.(env);
+                    }}
                   >
-                    {env.charAt(0).toUpperCase() + env.slice(1).toLowerCase()}
+                    {env.charAt(0).toUpperCase() + env.slice(1)}
                   </button>
                 ))}
               </div>
