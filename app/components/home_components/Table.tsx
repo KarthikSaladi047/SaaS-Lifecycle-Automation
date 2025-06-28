@@ -190,7 +190,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
           region.use_du_specific_le_http_cert,
           region.lease_date,
           customerEmails[customerGroup.customer] || "",
-          ...(region.tags || []),
+          region.tags || "",
         ]
           .join(" ")
           .toLowerCase();
