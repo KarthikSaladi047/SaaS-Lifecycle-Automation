@@ -142,11 +142,13 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 return (
                   <option
                     key={region}
-                    value={region}
+                    value={isInfra && hasWorkloadRegions ? "" : region}
                     disabled={isInfra && hasWorkloadRegions}
                   >
                     {region}
-                    {isInfra && hasWorkloadRegions ? " (Unavailable)" : ""}
+                    {isInfra && hasWorkloadRegions
+                      ? " (Delete other regions first)"
+                      : ""}
                   </option>
                 );
               })}

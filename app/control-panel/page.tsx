@@ -18,6 +18,7 @@ import { dbBackendOptions, tempus_urls, tempusUrl } from "../constants/pcd";
 import StepSelect from "../components/control_panel_components/StepSelect";
 import SuccessMessage from "../components/control_panel_components/SucessMessage";
 import DynamicForm from "../components/control_panel_components/DynamicForm";
+import Joke from "../components/control_panel_components/Joke";
 
 function setWithExpiry<T>(key: string, value: T, ttl: number): void {
   const now = new Date().getTime();
@@ -84,6 +85,7 @@ export default function ManagePCDPage() {
       use_du_specific_le_http_cert: "",
       token: "",
       tags: "",
+      note: "",
     }));
     setSubmissionSuccess(null);
     setShowTokenInput(false);
@@ -369,7 +371,7 @@ export default function ManagePCDPage() {
       <div className="min-h-screen bg-cover bg-center flex items-start pt-20 px-6 bg-gray-700">
         <div className="flex w-full max-w-7xl bg-white/90 backdrop-blur-md shadow-2xl rounded-3xl mx-auto border border-gray-300 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.7)] overflow-hidden">
           {/* Left: StepSelect - 1/3 */}
-          <div className="w-1/3 border-r border-gray-200 p-8">
+          <div className="w-1/3 border-r border-gray-400 p-8">
             <StepSelect
               formData={formData}
               handleInputChange={handleInputChange}
@@ -410,6 +412,8 @@ export default function ManagePCDPage() {
                   <p className="text-gray-600">
                     Choose an action to begin your workflow
                   </p>
+                  <hr className="w-full border-t border-gray-500 my-6 opacity-50" />
+                  <Joke />
                 </div>
               ) : submissionSuccess ? (
                 <SuccessMessage
