@@ -3,7 +3,7 @@ import React from "react";
 
 const LoadingSpinner = () => {
   const content = (
-    <div className="center">
+    <div className="center" style={{ transform: "scale(1.5)" }}>
       <svg
         id="bluecubes2"
         imageRendering="auto"

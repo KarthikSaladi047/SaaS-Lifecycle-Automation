@@ -15,7 +15,7 @@ export const environmentOptions = [
 ];
 
 export const dbBackendOptions = [
-  { value: "", label: "Select DB Backend" },
+  { value: "", label: "Select Database" },
   { value: "mysql", label: "Local MySQL" },
 ];
 

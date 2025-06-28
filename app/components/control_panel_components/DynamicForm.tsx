@@ -237,7 +237,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         formData.environment !== "production" && (
           <div className="w-full">
             <label className="block text-gray-600 mb-1" htmlFor="leaseUntil">
-              {step === "updateLease" ? "Set New Lease Date" : "Lease Date"}
+              {step === "updateLease" ? "Set New Lease" : "Set Lease"}
             </label>
 
             {/* Duration Dropdown */}
@@ -305,7 +305,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                   .split("T")[0]
               }
               required
-              className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+              className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
             />
           </div>
         )}

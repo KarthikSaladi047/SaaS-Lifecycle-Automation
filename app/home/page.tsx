@@ -2,9 +2,9 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import NavBar from "../components/NavBar";
-import Table from "../components/home/Table";
-import LoadingSpinner from "../components/home/LoadingSpinner";
+import NavBar from "../components/common_components/NavBar";
+import Table from "../components/home_components/Table";
+import LoadingSpinner from "../components/common_components/LoadingSpinner";
 import { GroupedData, AdminEmail } from "../types/pcd";
 
 export default function HomePage() {
