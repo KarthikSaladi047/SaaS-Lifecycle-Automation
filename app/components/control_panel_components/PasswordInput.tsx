@@ -24,7 +24,7 @@ export default function PasswordInput({ value, onChange }: PasswordInputProps) {
       <button
         type="button"
         onClick={() => setShow((prev) => !prev)}
-        className="absolute inset-y-0 right-3 flex items-center text-gray-600"
+        className="absolute inset-y-0 right-3 flex items-center text-gray-600 cursor-pointer"
       >
         {show ? <EyeOff size={20} /> : <Eye size={20} />}
       </button>

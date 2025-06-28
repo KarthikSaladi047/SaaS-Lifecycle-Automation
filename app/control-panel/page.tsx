@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "../components/common_components/NavBar";
 import { useSession } from "next-auth/react";
+import { CACHE_TTL, CHARTS_CACHE_TTL } from "../constants/pcd";
 
 import {
   Step,
   Chart,
   GroupedData,
-  Region,
   ReleaseResponse,
   AdminEmail,
 } from "../types/pcd";
@@ -44,7 +44,7 @@ export default function ManagePCDPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [step, setStep] = useState<Step>("select");
-  const [infraNamespaces, setInfraNamespaces] = useState<string[]>([]);
+  const [shortNames, setShortNames] = useState<string[]>([]);
   const [charts, setCharts] = useState<Chart[]>([]);
   const [regionNames, setRegionNames] = useState<string[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -52,7 +52,9 @@ export default function ManagePCDPage() {
   const [submissionSuccess, setSubmissionSuccess] = useState<string | null>(
     null
   );
+  const [data, setData] = useState<GroupedData[]>([]);
   const [showTokenInput, setShowTokenInput] = useState(false);
+  const [adminEmails, setAdminEmails] = useState<AdminEmail[]>([]);
   const [formData, setFormData] = useState({
     environment: "",
     shortName: "",
@@ -170,88 +172,100 @@ export default function ManagePCDPage() {
     }
   };
 
+  // check Auth
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth");
     }
   }, [router, status]);
 
+  // fetch Data and setShortNames
   useEffect(() => {
-    if (
-      !formData.environment ||
-      !session?.user?.email ||
-      status !== "authenticated"
-    )
+    resetForm();
+    if (!formData.environment) {
+      setStep("select");
       return;
+    }
+    if (formData.environment && step !== "upgrade") {
+      const fetchGroupedData = async () => {
+        const cacheKey = `fetchData_${formData.environment}`;
+        const cached = getWithExpiry<GroupedData[]>(cacheKey);
 
-    const CACHE_TTL = 60 * 1000;
-    const CHARTS_CACHE_TTL = 60 * 60 * 1000;
-
-    const fetchData = async () => {
-      try {
-        setFormData((prev) => ({
-          ...prev,
-          userEmail: session.user?.email ?? "",
-        }));
-
-        if (step === "upgrade") {
-          const targetURL = tempus_urls[formData.environment];
-          setSubmissionSuccess("Redirecting to tempus!");
-          router.push(targetURL);
+        if (cached) {
+          if (JSON.stringify(cached) !== JSON.stringify(data)) {
+            setData(cached);
+          }
           return;
         }
 
-        const data: GroupedData[] = await (async () => {
-          const cacheKey = `fetchData_${formData.environment}`;
-          const cached = getWithExpiry<GroupedData[]>(cacheKey);
-          if (cached) return cached;
-
+        try {
           const res = await fetch(`/api/fetchData?env=${formData.environment}`);
           if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
           const json: GroupedData[] = await res.json();
+
           setWithExpiry(cacheKey, json, CACHE_TTL);
-          return json;
-        })();
 
-        const infraOnly: Region[] = data.flatMap((customer) =>
-          customer.regions.filter((region) => region.region_name === "Infra")
+          if (JSON.stringify(json) !== JSON.stringify(data)) {
+            setData(json);
+          }
+        } catch (err) {
+          console.error("Error fetching grouped data", err);
+        }
+      };
+
+      // Set customer names as Shortnames
+      const allCustomerNamespaces = data.map((customer) => customer.customer);
+      setShortNames(allCustomerNamespaces);
+
+      fetchGroupedData();
+    }
+    if (step === "upgrade") {
+      const targetURL = tempus_urls[formData.environment];
+      setSubmissionSuccess("Redirecting to tempus!");
+      router.push(targetURL);
+      return;
+    }
+  }, [step, formData.environment, router, data]);
+
+  // fetch Customers
+  useEffect(() => {
+    if (!formData.environment) return;
+    const fetchAdminEmails = async () => {
+      const cacheKey = `fetchCustomers_${formData.environment}`;
+      const cached = getWithExpiry<AdminEmail[]>(cacheKey);
+
+      if (cached) {
+        if (JSON.stringify(cached) !== JSON.stringify(adminEmails)) {
+          setAdminEmails(cached);
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `/api/fetchCustomers?env=${formData.environment}`
         );
-        setInfraNamespaces(infraOnly.map((r) => r.namespace));
+        if (!res.ok)
+          throw new Error(`Failed to fetch customers: ${res.status}`);
 
-        await (async () => {
-          const cacheKey = "chartsListCache";
-          const cachedCharts = getWithExpiry<Chart[]>(cacheKey);
-          if (cachedCharts) {
-            setCharts(cachedCharts);
-            return;
-          }
+        const json: AdminEmail[] = await res.json();
+        setWithExpiry(cacheKey, json, CACHE_TTL);
 
-          const res = await fetch(tempusUrl, {
-            headers: { Authorization: `OAuth ${session.accessToken}` },
-          });
+        if (JSON.stringify(json) !== JSON.stringify(adminEmails)) {
+          setAdminEmails(json);
+        }
+      } catch (err) {
+        console.error("Error fetching admin emails", err);
+      }
+    };
 
-          if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(`API error: ${res.status} ${errorText}`);
-          }
+    fetchAdminEmails();
+  }, [formData.environment, adminEmails]);
 
-          const json: ReleaseResponse = await res.json();
-          const chartItems: Chart[] = json.releases.flatMap((release) =>
-            release.artifacts
-              .filter(
-                (artifact) =>
-                  artifact.artifact_type === "pcd-chart" && artifact.location
-              )
-              .map((artifact) => ({
-                version: release.version,
-                location: artifact.location,
-              }))
-          );
-
-          setWithExpiry(cacheKey, chartItems, CHARTS_CACHE_TTL);
-          setCharts(chartItems);
-        })();
-
+  useEffect(() => {
+    const matchData = async () => {
+      try {
+        // Set region names for selected customer
         const customerData = data.find(
           (item) => item.customer === formData.shortName
         );
@@ -261,46 +275,85 @@ export default function ManagePCDPage() {
           );
         }
 
+        // Set form defaults if adding a region
         if (step === "addRegion" && formData.shortName) {
-          const adminEmails: AdminEmail[] = await (async () => {
-            const cacheKey = `fetchCustomers_${formData.environment}`;
-            const cached = getWithExpiry<AdminEmail[]>(cacheKey);
-            if (cached) return cached;
-
-            const res = await fetch(
-              `/api/fetchCustomers?env=${formData.environment}`
-            );
-            if (!res.ok)
-              throw new Error(`Failed to fetch customers: ${res.status}`);
-            const json: AdminEmail[] = await res.json();
-            setWithExpiry(cacheKey, json, CACHE_TTL);
-            return json;
-          })();
-
           const matchedItem = adminEmails.find(
             (item) => item.shortname === formData.shortName
           );
-          const matchedRegion = infraOnly.find(
-            (r) => r.namespace === formData.shortName
+
+          const matchedCustomer = data.find(
+            (c) => c.customer === formData.shortName
+          );
+
+          const matchedInfraRegion = matchedCustomer?.regions.find(
+            (r) => r.region_name === "Infra"
           );
 
           setFormData((prev) => ({
             ...prev,
             adminEmail: matchedItem?.admin_email ?? "",
-            charturl: matchedRegion?.chart_url || "",
+            charturl: matchedInfraRegion?.chart_url || "",
             dbBackend: "mysql",
             use_du_specific_le_http_cert:
-              matchedRegion?.use_du_specific_le_http_cert ?? "false",
-            leaseDate: matchedRegion?.lease_date ?? "",
+              matchedInfraRegion?.use_du_specific_le_http_cert ?? "false",
+            leaseDate: matchedInfraRegion?.lease_date ?? "",
           }));
         }
       } catch (err) {
-        console.error("Error fetching", err);
+        console.error("Error processing customer data", err);
       }
     };
+    matchData();
+  }, [formData.environment, formData.shortName, step, data, adminEmails]);
 
-    fetchData();
-  }, [formData.environment, formData.shortName, step, session, status, router]);
+  // Get PCD charts from Tempus on load
+  useEffect(() => {
+    if (!session?.user.email) {
+      return;
+    }
+    const getCharts = async () => {
+      await (async () => {
+        const cacheKey = "chartsListCache";
+        const cachedCharts = getWithExpiry<Chart[]>(cacheKey);
+        if (cachedCharts) {
+          setCharts(cachedCharts);
+          return;
+        }
+
+        const res = await fetch(tempusUrl, {
+          headers: { Authorization: `OAuth ${session.accessToken}` },
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`API error: ${res.status} ${errorText}`);
+        }
+
+        const json: ReleaseResponse = await res.json();
+        const chartItems: Chart[] = json.releases.flatMap((release) =>
+          release.artifacts
+            .filter(
+              (artifact) =>
+                artifact.artifact_type === "pcd-chart" && artifact.location
+            )
+            .map((artifact) => ({
+              version: release.version,
+              location: artifact.location,
+            }))
+        );
+
+        setWithExpiry(cacheKey, chartItems, CHARTS_CACHE_TTL);
+        setCharts(chartItems);
+
+        setFormData((prev) => ({
+          ...prev,
+          userEmail: session.user.email ?? "",
+        }));
+      })();
+    };
+
+    getCharts();
+  }, [session]);
 
   const getFilenameWithoutExtension = (url: string): string => {
     if (!url) return "";
@@ -313,64 +366,82 @@ export default function ManagePCDPage() {
   return (
     <>
       <NavBar isControlPanel={true} />
-      <div
-        className="min-h-screen bg-cover bg-center flex flex-col items-center justify-start pt-20"
-        style={{
-          backgroundImage: "url('/bg.png')",
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "cover",
-          opacity: "0.9",
-        }}
-      >
-        <div className="w-full max-w-xl bg-white/90 backdrop-blur-md shadow-2xl rounded-3xl p-10 mx-4 border border-gray-300 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.7)]">
-          {/* Step: Select */}
-          {step === "select" && (
+      <div className="min-h-screen bg-cover bg-center flex items-start pt-20 px-6 bg-gray-700">
+        <div className="flex w-full max-w-7xl bg-white/90 backdrop-blur-md shadow-2xl rounded-3xl mx-auto border border-gray-300 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.7)] overflow-hidden">
+          {/* Left: StepSelect - 1/3 */}
+          <div className="w-1/3 border-r border-gray-200 p-8">
             <StepSelect
               formData={formData}
               handleInputChange={handleInputChange}
               setStep={setStep}
             />
-          )}
+          </div>
 
-          {/* Step: Form */}
-          {[
-            "create",
-            "addRegion",
-            "deleteRegion",
-            "updateLease",
-            "upgrade",
-          ].includes(step) &&
-            (submissionSuccess ? (
-              <SuccessMessage
-                step={step}
-                submissionSuccess={submissionSuccess}
-                environment={formData.environment}
-                resetForm={resetForm}
-              />
-            ) : (
-              <DynamicForm
-                step={step}
-                formData={formData}
-                handleInputChange={handleInputChange}
-                charts={charts}
-                infraNamespaces={infraNamespaces}
-                regionNames={regionNames}
-                dbBackendOptions={dbBackendOptions}
-                setStep={setStep}
-                setFormData={setFormData}
-                handleSubmit={handleSubmit}
-                showTokenInput={showTokenInput}
-                setShowTokenInput={setShowTokenInput}
-                showDeleteConfirm={showDeleteConfirm}
-                setShowDeleteConfirm={setShowDeleteConfirm}
-                deleteConfirmInput={deleteConfirmInput}
-                setDeleteConfirmInput={setDeleteConfirmInput}
-                submissionSuccess={submissionSuccess}
-                setSubmissionSuccess={setSubmissionSuccess}
-                resetForm={resetForm}
-                getFilenameWithoutExtension={getFilenameWithoutExtension}
-              />
-            ))}
+          {/* Right: Form or Success - 2/3 */}
+          <div className="w-2/3 p-10">
+            {[
+              "select",
+              "create",
+              "addRegion",
+              "deleteRegion",
+              "updateLease",
+              "upgrade",
+            ].includes(step) &&
+              (step === "select" ? (
+                <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-4 px-6">
+                  <div className="bg-yellow-100 p-6 rounded-full shadow-md">
+                    <svg
+                      className="w-12 h-12 text-yellow-600"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 1010 10A10 10 0 0012 2z"
+                      />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-semibold text-gray-800">
+                    Start by selecting an environment
+                  </h2>
+                  <p className="text-gray-600">
+                    Choose an action to begin your workflow
+                  </p>
+                </div>
+              ) : submissionSuccess ? (
+                <SuccessMessage
+                  step={step}
+                  submissionSuccess={submissionSuccess}
+                  environment={formData.environment}
+                  resetForm={resetForm}
+                />
+              ) : (
+                <DynamicForm
+                  step={step}
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  charts={charts}
+                  shortNames={shortNames}
+                  regionNames={regionNames}
+                  dbBackendOptions={dbBackendOptions}
+                  setFormData={setFormData}
+                  handleSubmit={handleSubmit}
+                  showTokenInput={showTokenInput}
+                  setShowTokenInput={setShowTokenInput}
+                  showDeleteConfirm={showDeleteConfirm}
+                  setShowDeleteConfirm={setShowDeleteConfirm}
+                  deleteConfirmInput={deleteConfirmInput}
+                  setDeleteConfirmInput={setDeleteConfirmInput}
+                  submissionSuccess={submissionSuccess}
+                  setSubmissionSuccess={setSubmissionSuccess}
+                  resetForm={resetForm}
+                  getFilenameWithoutExtension={getFilenameWithoutExtension}
+                />
+              ))}
+          </div>
         </div>
       </div>
     </>

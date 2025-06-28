@@ -17,10 +17,9 @@ interface DynamicFormProps {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => void;
   charts: Chart[];
-  infraNamespaces: string[];
+  shortNames: string[];
   regionNames: string[];
   dbBackendOptions: { value: string; label: string }[];
-  setStep: (step: Step | "select") => void;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
   handleSubmit: (e: React.FormEvent) => void;
   showTokenInput: boolean;
@@ -40,10 +39,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   formData,
   handleInputChange,
   charts,
-  infraNamespaces,
+  shortNames,
   regionNames,
   dbBackendOptions,
-  setStep,
   setFormData,
   handleSubmit,
   showTokenInput,
@@ -68,354 +66,273 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           : "Update Lease"}
       </h2>
 
-      {/* ENV Display */}
-      <h3 className="text-xl font-semibold mb-6 mt-8 text-left text-gray-800">
-        Selected Environment:{" "}
-        {formData.environment.charAt(0).toUpperCase() +
-          formData.environment.slice(1)}
-      </h3>
-
-      {/* Short Name Input */}
-      {step === "create" ? (
-        <input
-          type="text"
-          name="shortName"
-          placeholder="Short Name"
-          value={formData.shortName}
-          onChange={handleInputChange}
-          required
-          className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-      ) : (
-        <select
-          name="shortName"
-          value={formData.shortName}
-          onChange={handleInputChange}
-          required
-          className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">-- Select Short Name --</option>
-          {infraNamespaces.map((ns) => (
-            <option key={ns} value={ns}>
-              {ns}
-            </option>
-          ))}
-        </select>
-      )}
-
-      {/* Admin Email */}
-      {["create", "addRegion"].includes(step) && (
-        <input
-          type="email"
-          name="adminEmail"
-          placeholder="Admin Email"
-          value={formData.adminEmail}
-          onChange={handleInputChange}
-          readOnly={step !== "create"}
-          required
-          className={`w-full border px-4 py-3 rounded-xl ${
-            step !== "create"
-              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-              : "focus:outline-none focus:ring-2 focus:ring-blue-400"
-          }`}
-        />
-      )}
-
-      {/* Password Input */}
-      {["create", "addRegion"].includes(step) && (
-        <PasswordInput
-          value={formData.adminPassword}
-          onChange={handleInputChange}
-        />
-      )}
-      {/* Region Name */}
-      {step === "addRegion" ? (
-        <input
-          type="text"
-          name="regionName"
-          placeholder="Region Name"
-          value={formData.regionName}
-          onChange={handleInputChange}
-          required
-          className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-      ) : ["deleteRegion", "updateLease"].includes(step) ? (
-        <>
-          <select
-            name="regionName"
-            value={formData.regionName}
-            onChange={handleInputChange}
-            required
-            disabled={formData.shortName === ""}
-            className={`w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-              formData.shortName === "" ? "bg-gray-100 cursor-not-allowed" : ""
-            }`}
-          >
-            <option value="">-- Select Region --</option>
-            {regionNames.map((region) => {
-              const isInfra = region.toLowerCase() === "infra";
-              const hasWorkloadRegions = regionNames.some(
-                (r) => r.toLowerCase() !== "infra"
-              );
-
-              return (
-                <option
-                  key={region}
-                  value={region}
-                  disabled={isInfra && hasWorkloadRegions}
-                  title={
-                    isInfra && hasWorkloadRegions
-                      ? "Infra Region cannot be deleted when workload regions are running"
-                      : ""
-                  }
-                >
-                  {region}
-                  {isInfra && hasWorkloadRegions ? " (Unavailable)" : ""}
-                </option>
-              );
-            })}
-          </select>
-        </>
-      ) : null}
-
-      {/* DB Backend */}
-      {["create", "addRegion"].includes(step) && (
-        <select
-          name="dbBackend"
-          value={formData.dbBackend}
-          onChange={handleInputChange}
-          required
-          disabled={step === "addRegion"}
-          className={`w-full border px-4 py-3 rounded-xl cursor-pointer ${
-            step === "addRegion"
-              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-              : "focus:outline-none focus:ring-2 focus:ring-blue-400"
-          }`}
-        >
-          {dbBackendOptions.map(({ value, label }) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      )}
-
-      {/* Chart URL */}
-      {["create", "addRegion"].includes(step) && (
-        <select
-          name="charturl"
-          value={formData.charturl}
-          onChange={handleInputChange}
-          required={step === "create"}
-          disabled={step === "addRegion"}
-          className={`w-full border px-4 py-3 rounded-xl cursor-pointer ${
-            step === "addRegion"
-              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-              : "focus:outline-none focus:ring-2 focus:ring-blue-400"
-          }`}
-        >
-          <option value="">Choose PCD Version</option>
-          {step === "create" &&
-            charts.map(({ version, location }) => (
-              <option key={location} value={location}>
-                {version}
-              </option>
-            ))}
-          {step === "addRegion" && (
-            <option
-              key={getFilenameWithoutExtension(formData.charturl)}
-              value={formData.charturl}
-            >
-              {getFilenameWithoutExtension(formData.charturl)}
-            </option>
-          )}
-        </select>
-      )}
-
-      {/* Lease Date */}
-      {["create", "addRegion", "updateLease"].includes(step) &&
-        formData.environment !== "production" && (
-          <div className="w-full">
-            <label className="block text-gray-600 mb-1" htmlFor="leaseUntil">
-              {step === "updateLease" ? "Set New Lease" : "Set Lease"}
-            </label>
-
-            {/* Duration Dropdown */}
-            <select
-              id="leaseSelector"
-              onChange={(e) => {
-                const val = e.target.value;
-                const now = new Date();
-                const leaseDate = new Date(now);
-
-                if (val.endsWith("w")) {
-                  leaseDate.setDate(now.getDate() + parseInt(val) * 7);
-                } else if (val.endsWith("m")) {
-                  leaseDate.setMonth(now.getMonth() + parseInt(val));
-                }
-
-                handleInputChange({
-                  target: {
-                    name: "leaseDate",
-                    value: leaseDate.toISOString().split("T")[0],
-                  },
-                } as unknown as React.ChangeEvent<HTMLInputElement>);
-              }}
-              className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer mb-2"
-            >
-              <option value="">Select Duration</option>
-
-              {/* Weeks only for dev/qa */}
-              {(formData.environment === "dev" ||
-                formData.environment === "qa") &&
-                [1, 2, 3, 4].map((w) => (
-                  <option key={w} value={`${w}w`}>
-                    {w} week{w > 1 ? "s" : ""}
-                  </option>
-                ))}
-
-              {/* Weeks + Months for staging */}
-              {formData.environment === "staging" && (
-                <>
-                  {[1, 2, 3].map((w) => (
-                    <option key={`w${w}`} value={`${w}w`}>
-                      {w} week{w > 1 ? "s" : ""}
-                    </option>
-                  ))}
-                  {[1, 2, 3].map((m) => (
-                    <option key={`m${m}`} value={`${m}m`}>
-                      {m} month{m > 1 ? "s" : ""}
-                    </option>
-                  ))}
-                </>
-              )}
-            </select>
-
-            {/* Readonly Date Display */}
+      {/* Short Name + Region Name */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="w-full">
+          <label className="block text-gray-700 mb-1" htmlFor="shortName">
+            PCD Short Name
+          </label>
+          {step === "create" ? (
             <input
-              type="date"
-              name="leaseDate"
-              id="leaseDate"
-              value={formData.leaseDate}
+              type="text"
+              name="shortName"
+              id="shortName"
+              placeholder="Enter short name"
+              value={formData.shortName}
               onChange={handleInputChange}
-              disabled
-              min={
-                new Date(Date.now() + 24 * 60 * 60 * 1000)
-                  .toISOString()
-                  .split("T")[0]
-              }
               required
-              className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+              className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          ) : (
+            <select
+              name="shortName"
+              id="shortName"
+              value={formData.shortName}
+              onChange={handleInputChange}
+              required
+              className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+            >
+              <option value="">Select Short Name</option>
+              {shortNames.map((ns) => (
+                <option key={ns} value={ns}>
+                  {ns}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="w-full">
+          {step !== "create" && (
+            <label className="block text-gray-700 mb-1" htmlFor="regionName">
+              Region Name
+            </label>
+          )}
+          {step === "addRegion" ? (
+            <input
+              type="text"
+              name="regionName"
+              id="regionName"
+              placeholder="Enter region name"
+              value={formData.regionName}
+              onChange={handleInputChange}
+              required
+              className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          ) : ["deleteRegion", "updateLease"].includes(step) ? (
+            <select
+              name="regionName"
+              id="regionName"
+              value={formData.regionName}
+              onChange={handleInputChange}
+              required
+              disabled={formData.shortName === ""}
+              className={`w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                formData.shortName === ""
+                  ? "bg-gray-100 cursor-not-allowed"
+                  : ""
+              }`}
+            >
+              <option value="">Select Region</option>
+              {regionNames.map((region) => {
+                const isInfra = region.toLowerCase() === "infra";
+                const hasWorkloadRegions = regionNames.some(
+                  (r) => r.toLowerCase() !== "infra"
+                );
+                return (
+                  <option
+                    key={region}
+                    value={region}
+                    disabled={isInfra && hasWorkloadRegions}
+                  >
+                    {region}
+                    {isInfra && hasWorkloadRegions ? " (Unavailable)" : ""}
+                  </option>
+                );
+              })}
+            </select>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Admin Email + Password */}
+      {["create", "addRegion"].includes(step) && (
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="w-full">
+            <label htmlFor="adminEmail" className="block text-gray-700 mb-1">
+              Admin Email
+            </label>
+            <input
+              type="email"
+              name="adminEmail"
+              id="adminEmail"
+              placeholder="Enter admin email"
+              value={formData.adminEmail}
+              onChange={handleInputChange}
+              readOnly={step !== "create"}
+              required
+              className={`w-full border px-4 py-3 rounded-xl ${
+                step !== "create"
+                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                  : "focus:outline-none focus:ring-2 focus:ring-blue-400"
+              }`}
             />
           </div>
-        )}
-      {/* Tag input field */}
-      {["create", "addRegion"].includes(step) && (
-        <div>
-          <label
-            htmlFor="tags"
-            className="block text-gray-700 mb-1 font-medium"
-          >
-            Tags
-          </label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {formData.tags
-              .split(",")
-              .filter(Boolean)
-              .map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm flex items-center"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleInputChange({
-                        target: {
-                          name: "tags",
-                          value: formData.tags
-                            .split(",")
-                            .filter((t) => t.trim() !== tag)
-                            .join(","),
-                        },
-                      } as unknown as React.ChangeEvent<HTMLInputElement>)
-                    }
-                    className="ml-2 text-red-500 hover:text-red-700"
-                  >
-                    &times;
-                  </button>
-                </span>
-              ))}
-          </div>
-
-          <input
-            type="text"
-            placeholder="Type and press Enter"
-            onKeyDown={(e) => {
-              const input = (e.target as HTMLInputElement).value.trim();
-              if (e.key === "Enter" && input !== "") {
-                e.preventDefault();
-                const currentTags = formData.tags
-                  .split(",")
-                  .map((t) => t.trim())
-                  .filter(Boolean);
-
-                if (!currentTags.includes(input)) {
-                  handleInputChange({
-                    target: {
-                      name: "tags",
-                      value: [...currentTags, input].join(","),
-                    },
-                  } as unknown as React.ChangeEvent<HTMLInputElement>);
-                }
-                (e.target as HTMLInputElement).value = "";
-              }
-            }}
-            className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-
-          <div className="flex flex-wrap gap-2 mt-2">
-            {Tag_suggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                onClick={() => {
-                  const currentTags = formData.tags
-                    .split(",")
-                    .map((t) => t.trim())
-                    .filter(Boolean);
-                  if (!currentTags.includes(suggestion)) {
-                    handleInputChange({
-                      target: {
-                        name: "tags",
-                        value: [...currentTags, suggestion].join(","),
-                      },
-                    } as unknown as React.ChangeEvent<HTMLInputElement>);
-                  }
-                }}
-                className="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm hover:bg-gray-300"
-              >
-                {suggestion}
-              </button>
-            ))}
+          <div className="w-full">
+            <label className="block text-gray-700 mb-1">Admin Password</label>
+            <PasswordInput
+              value={formData.adminPassword}
+              onChange={handleInputChange}
+            />
           </div>
         </div>
       )}
 
-      {/* Note */}
-      {step === "updateLease" && (
-        <input
-          type="text"
-          name="note"
-          placeholder="Enter Reason for Extending the Lease!"
-          value={formData.note}
-          onChange={handleInputChange}
-          required
-          className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
+      {/* DB Backend + Chart URL */}
+      {["create", "addRegion"].includes(step) && (
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="w-full">
+            <label htmlFor="dbBackend" className="block text-gray-700 mb-1">
+              DB Backend
+            </label>
+            <select
+              name="dbBackend"
+              id="dbBackend"
+              value={formData.dbBackend}
+              onChange={handleInputChange}
+              required
+              disabled={step === "addRegion"}
+              className={`w-full border px-4 py-3 rounded-xl cursor-pointer ${
+                step === "addRegion"
+                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                  : "focus:outline-none focus:ring-2 focus:ring-blue-400"
+              }`}
+            >
+              {dbBackendOptions.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-full">
+            <label htmlFor="charturl" className="block text-gray-700 mb-1">
+              Chart Version
+            </label>
+            <select
+              name="charturl"
+              id="charturl"
+              value={formData.charturl}
+              onChange={handleInputChange}
+              required={step === "create"}
+              disabled={step === "addRegion"}
+              className={`w-full border px-4 py-3 rounded-xl cursor-pointer ${
+                step === "addRegion"
+                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                  : "focus:outline-none focus:ring-2 focus:ring-blue-400"
+              }`}
+            >
+              <option value="">Choose PCD Version</option>
+              {step === "create" &&
+                charts.map(({ version, location }) => (
+                  <option key={location} value={location}>
+                    {version}
+                  </option>
+                ))}
+              {step === "addRegion" && (
+                <option
+                  key={getFilenameWithoutExtension(formData.charturl)}
+                  value={formData.charturl}
+                >
+                  {getFilenameWithoutExtension(formData.charturl)}
+                </option>
+              )}
+            </select>
+          </div>
+        </div>
       )}
 
+      {/* Lease Duration + Lease Date */}
+      {["create", "addRegion", "updateLease"].includes(step) &&
+        formData.environment !== "production" && (
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="w-full">
+              <label
+                htmlFor="leaseSelector"
+                className="block text-gray-700 mb-1"
+              >
+                Lease Duration
+              </label>
+              <select
+                id="leaseSelector"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const now = new Date();
+                  const leaseDate = new Date(now);
+
+                  if (val.endsWith("w")) {
+                    leaseDate.setDate(now.getDate() + parseInt(val) * 7);
+                  } else if (val.endsWith("m")) {
+                    leaseDate.setMonth(now.getMonth() + parseInt(val));
+                  }
+
+                  handleInputChange({
+                    target: {
+                      name: "leaseDate",
+                      value: leaseDate.toISOString().split("T")[0],
+                    },
+                  } as React.ChangeEvent<HTMLInputElement>);
+                }}
+                className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+              >
+                <option value="">Select Duration</option>
+                {(formData.environment === "dev" ||
+                  formData.environment === "qa") &&
+                  [1, 2, 3, 4].map((w) => (
+                    <option key={w} value={`${w}w`}>
+                      {w} week{w > 1 ? "s" : ""}
+                    </option>
+                  ))}
+                {formData.environment === "staging" && (
+                  <>
+                    {[1, 2, 3].map((w) => (
+                      <option key={`w${w}`} value={`${w}w`}>
+                        {w} week{w > 1 ? "s" : ""}
+                      </option>
+                    ))}
+                    {[1, 2, 3].map((m) => (
+                      <option key={`m${m}`} value={`${m}m`}>
+                        {m} month{m > 1 ? "s" : ""}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
+
+            <div className="w-full">
+              <label htmlFor="leaseDate" className="block text-gray-700 mb-1">
+                Lease Expiry Date
+              </label>
+              <input
+                type="date"
+                name="leaseDate"
+                id="leaseDate"
+                value={formData.leaseDate}
+                onChange={handleInputChange}
+                disabled
+                min={
+                  new Date(Date.now() + 24 * 60 * 60 * 1000)
+                    .toISOString()
+                    .split("T")[0]
+                }
+                required
+                className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+              />
+            </div>
+          </div>
+        )}
       {/* HTTP Certs */}
       {["create", "addRegion"].includes(step) && (
         <div className="flex items-center space-x-3 cursor-pointer">
@@ -445,6 +362,114 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           </label>
         </div>
       )}
+      {/* Tag input field */}
+      {["create", "addRegion"].includes(step) && (
+        <div>
+          <label
+            htmlFor="tags"
+            className="block text-gray-700 mb-1 font-medium"
+          >
+            Tags
+          </label>
+          <div className="flex flex-wrap gap-2 items-center border px-3 py-2 rounded-xl focus-within:ring-2 focus-within:ring-blue-400">
+            {formData.tags
+              .split(",")
+              .filter(Boolean)
+              .map((tag) => (
+                <span
+                  key={tag}
+                  className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm flex items-center"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleInputChange({
+                        target: {
+                          name: "tags",
+                          value: formData.tags
+                            .split(",")
+                            .filter((t) => t.trim() !== tag)
+                            .join(","),
+                        },
+                      } as React.ChangeEvent<HTMLInputElement>)
+                    }
+                    className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+
+            <input
+              type="text"
+              placeholder="Type and press Enter"
+              onKeyDown={(e) => {
+                const input = (e.target as HTMLInputElement).value.trim();
+                if (e.key === "Enter" && input !== "") {
+                  e.preventDefault();
+                  const currentTags = formData.tags
+                    .split(",")
+                    .map((t) => t.trim())
+                    .filter(Boolean);
+
+                  if (!currentTags.includes(input)) {
+                    handleInputChange({
+                      target: {
+                        name: "tags",
+                        value: [...currentTags, input].join(","),
+                      },
+                    } as React.ChangeEvent<HTMLInputElement>);
+                  }
+                  (e.target as HTMLInputElement).value = "";
+                }
+              }}
+              className="flex-1 min-w-[120px] border-none outline-none focus:ring-0"
+            />
+          </div>
+
+          {/* Optional tag suggestions */}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {Tag_suggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => {
+                  const currentTags = formData.tags
+                    .split(",")
+                    .map((t) => t.trim())
+                    .filter(Boolean);
+                  if (!currentTags.includes(suggestion)) {
+                    handleInputChange({
+                      target: {
+                        name: "tags",
+                        value: [...currentTags, suggestion].join(","),
+                      },
+                    } as React.ChangeEvent<HTMLInputElement>);
+                  }
+                }}
+                className="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm hover:bg-gray-300 cursor-pointer"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Note */}
+      {step === "updateLease" && (
+        <input
+          type="text"
+          name="note"
+          placeholder="Enter Reason for Extending the Lease!"
+          value={formData.note}
+          onChange={handleInputChange}
+          required
+          className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      )}
+
       {/* Token &*/}
       {showTokenInput && (
         <div className="fixed inset-0 flex items-center justify-center bg-cyan-100 bg-opacity-50 z-50">
@@ -466,14 +491,14 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 onClick={() => {
                   setShowTokenInput(false);
                 }}
-                className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100"
+                className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 onClick={handleSubmit}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 cursor-pointer"
               >
                 Submit
               </button>
@@ -516,7 +541,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               <button
                 type="submit"
                 onClick={handleSubmit}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 cursor-pointer"
               >
                 Confirm Delete
               </button>
@@ -524,25 +549,26 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           </div>
         </div>
       )}
-      {/* Submit Button */}
-      {!(showDeleteConfirm && step === "deleteRegion") && (
+
+      {/* Submit & Reset */}
+      <div className="flex justify-between items-center">
         <button
           type="submit"
-          className="w-full bg-blue-700 text-white px-4 py-3 rounded-xl hover:bg-red-700 transition cursor-pointer"
+          className="bg-blue-700 text-white px-6 py-3 rounded-xl hover:bg-red-700 transition cursor-pointer"
         >
           Submit
         </button>
-      )}
-      <span
-        onClick={() => {
-          setStep("select");
-          setSubmissionSuccess(null);
-          resetForm();
-        }}
-        className="mt-2 block cursor-pointer text-blue-600 hover:text-red-600"
-      >
-        ← Back
-      </span>
+
+        <span
+          onClick={() => {
+            setSubmissionSuccess(null);
+            resetForm();
+          }}
+          className="cursor-pointer text-blue-600 hover:text-red-600 font-semibold"
+        >
+          Reset Form
+        </span>
+      </div>
     </form>
   );
 };

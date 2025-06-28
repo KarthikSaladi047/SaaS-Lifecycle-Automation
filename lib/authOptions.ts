@@ -16,16 +16,6 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        url: "https://accounts.google.com/o/oauth2/v2/auth",
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code",
-          scope: "openid email profile",
-          hd: "platform9.com",
-        },
-      },
     }),
   ],
   pages: {
@@ -38,14 +28,10 @@ export const authOptions: NextAuthOptions = {
       if (account?.id_token) {
         const decoded = jwt.decode(account.id_token) as GoogleIdToken;
         const userEmail = decoded?.email;
-        console.log("🔍 signIn decoded email:", userEmail);
-
         if (userEmail && userEmail.endsWith(`@${allowedDomain}`)) {
           return true;
         }
       }
-
-      console.warn("❌ Rejected login attempt");
       return false;
     },
 

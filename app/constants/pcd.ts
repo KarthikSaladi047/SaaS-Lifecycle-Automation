@@ -54,3 +54,6 @@ export const Tag_suggestions = [
   "SA",
   "Support",
 ];
+
+export const CACHE_TTL = 60 * 1000;
+export const CHARTS_CACHE_TTL = 60 * 60 * 1000;

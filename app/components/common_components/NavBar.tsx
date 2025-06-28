@@ -89,7 +89,7 @@ export default function NavBar({
                     </div>
                     <button
                       onClick={() => signOut()}
-                      className="w-full text-center px-4 py-2 text-sm hover:bg-red-500"
+                      className="w-full text-center px-4 py-2 text-sm hover:bg-red-500 cursor-pointer"
                     >
                       Sign Out
                     </button>
@@ -113,7 +113,7 @@ export default function NavBar({
                       ${
                         selectedEnv === env
                           ? "text-yellow-400 after:bg-yellow-400"
-                          : "hover:text-green-300 after:bg-transparent hover:after:bg-green-300"
+                          : "hover:text-green-300 after:bg-transparent hover:after:bg-green-300 cursor-pointer"
                       }`}
                     onClick={() => {
                       if (!loading) onEnvChange?.(env);
