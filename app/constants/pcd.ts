@@ -47,6 +47,13 @@ export const tempus_urls: Record<string, string> = {
   dev: "https://tempus-dev.platform9.horse",
 };
 
+export const bork_urls: Record<string, string> = {
+  production: "https://bork.app.pcd.platform9.com",
+  staging: "https://bork.app.staging-pcd.platform9.com",
+  qa: "https://bork.app.qa-pcd.platform9.com",
+  dev: "https://bork.app.dev-pcd.platform9.com",
+};
+
 export const Tag_suggestions = [
   "Reproducer",
   "Sales",

@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { GroupedData, APIItem } from "@/app/types/pcd";
-
-// Allowed environments
-const allowedEnvs = ["dev", "qa", "staging", "production"];
+import { bork_urls } from "@/app/constants/pcd";
 
 async function fetchAPIData(env: string): Promise<GroupedData[]> {
-  const apiUrl =
-    env === "production"
-      ? "https://bork.app.pcd.platform9.com/api/v1/regions"
-      : `https://bork.app.${env}-pcd.platform9.com/api/v1/regions`;
+  const baseURL = bork_urls[env];
 
-  const response = await axios.get(apiUrl, { params: { env } });
+  console.log(`[INFO] Fetching regions from: ${baseURL}/api/v1/regions`);
+
+  const response = await axios.get(`${baseURL}/api/v1/regions`, {
+    params: { env },
+  });
+
   const items: APIItem[] = response.data.items;
+  console.log(`[INFO] Retrieved ${items.length} region records`);
+
   const groupedMap: Record<string, GroupedData> = {};
 
   for (const item of items) {
-    if (!item.customer_shortname || !item.region_name || !item.fqdn) continue;
+    if (!item.customer_shortname || !item.region_name || !item.fqdn) {
+      console.warn(`[WARN] Skipping incomplete item: ${JSON.stringify(item)}`);
+      continue;
+    }
+
     const customer = item.customer_shortname.trim().toLowerCase();
 
     if (!groupedMap[customer]) {
@@ -38,27 +44,41 @@ async function fetchAPIData(env: string): Promise<GroupedData[]> {
       tags: item.metadata?.tags || "",
     });
   }
-  return Object.values(groupedMap).sort((a, b) =>
+
+  const result = Object.values(groupedMap).sort((a, b) =>
     a.customer.localeCompare(b.customer)
   );
+
+  console.log(`[SUCCESS] Grouped data for ${result.length} customers`);
+  return result;
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const env = searchParams.get("env");
 
-  if (!env || !allowedEnvs.includes(env)) {
-    return NextResponse.json(
-      { error: "Missing or invalid 'env' param" },
-      { status: 400 }
-    );
+  console.log(`[INFO] GET /regions called with env: ${env}`);
+
+  if (!env) {
+    console.warn("[WARN] Missing 'env' param in request");
+    return NextResponse.json({ error: "Missing 'env' param" }, { status: 400 });
   }
 
   try {
     const data = await fetchAPIData(env);
     return NextResponse.json(data);
-  } catch (error) {
-    console.error("API Handler Error:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error(
+        `[ERROR] Failed to fetch/process regions: ${error.message}`
+      );
+    } else {
+      console.error(
+        "[ERROR] Unknown error occurred while fetching regions:",
+        error
+      );
+    }
+
     return NextResponse.json(
       { error: "Failed to fetch or process data" },
       { status: 500 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import https from "https";
+import fs from "fs/promises";
+import { bork_urls } from "@/app/constants/pcd";
 
 const AIM = "opencloud";
 const MULTI_REGION = true;
@@ -21,23 +23,28 @@ export async function POST(req: NextRequest) {
       tags,
     } = await req.json();
 
+    // 🔍 Track request initiator
+    if (userEmail) {
+      console.log(`[INFO] Region deploy requested by userEmail: ${userEmail}`);
+    } else {
+      console.warn("[WARN] No userEmail provided in request body");
+    }
+
+    const getTokenFromSecret = async (env: string) => {
+      const secretPath = `/var/run/secrets/platform9/${env}-bork-token`;
+      return (await fs.readFile(secretPath, "utf8")).trim();
+    };
+
     const isInfra = !regionName;
-    const borkToken = environment === "production" ? token : "";
+    const borkToken = !token ? await getTokenFromSecret(environment) : token;
 
-    const baseURL =
-      environment === "production"
-        ? "https://bork.app.pcd.platform9.com"
-        : `https://bork.app.${environment}-pcd.platform9.com`;
-
-    const regionDomain =
-      environment === "production"
-        ? `${shortName}${isInfra ? "" : `-${regionName}`}.app.pcd.platform9.com`
-        : `${shortName}${
-            isInfra ? "" : `-${regionName}`
-          }.app.${environment}-pcd.platform9.com`;
+    const baseURL = bork_urls[environment];
+    const regionPrefix = isInfra ? shortName : `${shortName}-${regionName}`;
+    const regionDomain = baseURL.replace("bork", regionPrefix);
 
     // Step 1: Create Customer (only for Infra)
     if (isInfra) {
+      console.log(`[INFO] Creating customer: ${shortName}`);
       const createCustomer = await fetch(
         `${baseURL}/api/v1/customers/${shortName}`,
         {
@@ -46,10 +53,15 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({ admin_email: adminEmail, aim: AIM }),
         }
       );
-      if (!createCustomer.ok) throw new Error("Customer creation failed");
+      if (!createCustomer.ok) {
+        const errText = await createCustomer.text();
+        console.error(`[ERROR] Customer creation failed: ${errText}`);
+        throw new Error("Customer creation failed");
+      }
     }
 
     // Step 2: Create Region
+    console.log(`[INFO] Creating region: ${regionDomain}`);
     const createRegion = await fetch(
       `${baseURL}/api/v1/regions/${regionDomain}`,
       {
@@ -58,9 +70,14 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ customer: shortName }),
       }
     );
-    if (!createRegion.ok) throw new Error("Region creation failed");
+    if (!createRegion.ok) {
+      const errText = await createRegion.text();
+      console.error(`[ERROR] Region creation failed: ${errText}`);
+      throw new Error("Region creation failed");
+    }
 
     // Step 3: Deploy Region
+    console.log(`[INFO] Deploying region: ${regionDomain}`);
     const deployResponse = await new Promise<{
       statusCode: number;
       body: string;
@@ -84,7 +101,11 @@ export async function POST(req: NextRequest) {
         }
       );
 
-      req.on("error", (err) => reject(err));
+      req.on("error", (err) => {
+        console.error("[ERROR] HTTPS DEPLOY request failed:", err);
+        reject(err);
+      });
+
       req.write(
         JSON.stringify({
           admin_password: adminPassword,
@@ -105,10 +126,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (deployResponse.statusCode >= 400) {
+      console.error(
+        `[ERROR] Deployment failed with status ${deployResponse.statusCode}: ${deployResponse.body}`
+      );
       throw new Error(`Region deployment failed: ${deployResponse.body}`);
     }
 
     // Step 4: Add Metadata
+    console.log(`[INFO] Adding metadata to region: ${regionDomain}`);
     const addMetadata = await fetch(
       `${baseURL}/api/v1/regions/${regionDomain}/metadata`,
       {
@@ -124,14 +149,24 @@ export async function POST(req: NextRequest) {
         }),
       }
     );
-    if (!addMetadata.ok) throw new Error("Metadata addition failed");
 
+    if (!addMetadata.ok) {
+      const errText = await addMetadata.text();
+      console.error(`[ERROR] Metadata addition failed: ${errText}`);
+      throw new Error("Metadata addition failed");
+    }
+
+    console.log(
+      `[SUCCESS] Region ${regionName || "Infra"} deployed successfully.`
+    );
     return NextResponse.json({
-      message: `${regionName} region created and deployed successfully`,
+      message: `${
+        regionName || "Infra"
+      } region created and deployed successfully`,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error:", message);
+    console.error("[FATAL] Region creation failed:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

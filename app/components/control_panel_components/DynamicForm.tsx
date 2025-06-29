@@ -336,34 +336,35 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           </div>
         )}
       {/* HTTP Certs */}
-      {["create", "addRegion"].includes(step) && (
-        <div className="flex items-center space-x-3 cursor-pointer">
-          <input
-            type="checkbox"
-            id="use_du_specific_le_http_cert"
-            name="use_du_specific_le_http_cert"
-            checked={formData.use_du_specific_le_http_cert === "true"}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                use_du_specific_le_http_cert: e.target.checked
-                  ? "true"
-                  : "false",
-              }))
-            }
-            disabled={step === "addRegion"}
-            className={`w-5 h-5 accent-blue-600 ${
-              step === "addRegion" ? "cursor-not-allowed" : ""
-            }`}
-          />
-          <label
-            htmlFor="use_du_specific_le_http_cert"
-            className="text-gray-700"
-          >
-            Use special HTTP Certs?
-          </label>
-        </div>
-      )}
+      {["create", "addRegion"].includes(step) &&
+        formData.environment !== "production" && (
+          <div className="flex items-center space-x-3 cursor-pointer">
+            <input
+              type="checkbox"
+              id="use_du_specific_le_http_cert"
+              name="use_du_specific_le_http_cert"
+              checked={formData.use_du_specific_le_http_cert === "true"}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  use_du_specific_le_http_cert: e.target.checked
+                    ? "true"
+                    : "false",
+                }))
+              }
+              disabled={step === "addRegion"}
+              className={`w-5 h-5 accent-blue-600 ${
+                step === "addRegion" ? "cursor-not-allowed" : ""
+              }`}
+            />
+            <label
+              htmlFor="use_du_specific_le_http_cert"
+              className="text-gray-700"
+            >
+              Use special HTTP Certs?
+            </label>
+          </div>
+        )}
       {/* Tag input field */}
       {["create", "addRegion"].includes(step) && (
         <div>
@@ -474,7 +475,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
 
       {/* Token &*/}
       {showTokenInput && (
-        <div className="fixed inset-0 flex items-center justify-center bg-cyan-100 bg-opacity-50 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-opacity-50 z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-lg">
             <h3 className="text-xl font-semibold mb-4">
               Enter Production Bork Token

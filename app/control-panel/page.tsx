@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "../components/common_components/NavBar";
 import { useSession } from "next-auth/react";
-import { CACHE_TTL, CHARTS_CACHE_TTL } from "../constants/pcd";
+import { CHARTS_CACHE_TTL } from "../constants/pcd";
 
 import {
   Step,
@@ -13,6 +13,7 @@ import {
   ReleaseResponse,
   AdminEmail,
   FormData,
+  Region,
 } from "../types/pcd";
 
 import { dbBackendOptions, tempus_urls, tempusUrl } from "../constants/pcd";
@@ -60,6 +61,8 @@ export default function ManagePCDPage() {
   const [adminEmails, setAdminEmails] = useState<AdminEmail[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
+  const prevEnvRef = useRef<string | null>(null);
+  const [shouldRefetch, setShouldRefetch] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     environment: "",
     shortName: "",
@@ -182,6 +185,7 @@ export default function ManagePCDPage() {
       const result = await response.json();
       console.log(`${actionLabel} result:`, result);
       setSubmissionSuccess(responseMessage);
+      setShouldRefetch(true);
     } catch (error) {
       console.error("Submission error:", error);
       setSubmissionSuccess("Something went wrong. Please check the console.");
@@ -200,55 +204,40 @@ export default function ManagePCDPage() {
 
   // fetch complete Data
   useEffect(() => {
-    resetForm();
+    if (formData.environment !== prevEnvRef.current && step !== "upgrade") {
+      resetForm();
+      prevEnvRef.current = formData.environment;
+    }
+
     if (formData.environment && step !== "upgrade") {
       const fetchGroupedData = async () => {
-        const cacheKey = `fetchData_${formData.environment}`;
-        const cached = getWithExpiry<GroupedData[]>(cacheKey);
-
-        if (cached) {
-          if (JSON.stringify(cached) !== JSON.stringify(data)) {
-            setData(cached);
-          }
-          return;
-        }
         setIsLoading(true);
         try {
           const res = await fetch(`/api/fetchData?env=${formData.environment}`);
           if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
           const json: GroupedData[] = await res.json();
-
-          setWithExpiry(cacheKey, json, CACHE_TTL);
-
-          if (JSON.stringify(json) !== JSON.stringify(data)) {
-            setData(json);
-          }
+          setData(json);
         } catch (err) {
           console.error("Error fetching grouped data", err);
         } finally {
           setIsLoading(false);
+          if (shouldRefetch) setShouldRefetch(false);
         }
       };
 
       fetchGroupedData();
     }
-  }, [step, formData.environment, data]);
+  }, [step, formData.environment, shouldRefetch]);
 
   // fetch Customers
   useEffect(() => {
-    resetForm();
-    if (!formData.environment) return;
+    if (formData.environment !== prevEnvRef.current && step !== "upgrade") {
+      resetForm();
+      prevEnvRef.current = formData.environment;
+    }
+    if (!formData.environment && step !== "upgrade") return;
+
     const fetchAdminEmails = async () => {
-      const cacheKey = `fetchCustomers_${formData.environment}`;
-      const cached = getWithExpiry<AdminEmail[]>(cacheKey);
-
-      if (cached) {
-        if (JSON.stringify(cached) !== JSON.stringify(adminEmails)) {
-          setAdminEmails(cached);
-        }
-        return;
-      }
-
       setIsLoading(true);
       try {
         const res = await fetch(
@@ -258,29 +247,28 @@ export default function ManagePCDPage() {
           throw new Error(`Failed to fetch customers: ${res.status}`);
 
         const json: AdminEmail[] = await res.json();
-        setWithExpiry(cacheKey, json, CACHE_TTL);
-
-        if (JSON.stringify(json) !== JSON.stringify(adminEmails)) {
-          setAdminEmails(json);
-        }
+        setAdminEmails(json);
       } catch (err) {
         console.error("Error fetching admin emails", err);
       } finally {
         setIsLoading(false);
+        if (shouldRefetch) setShouldRefetch(false);
       }
     };
 
     fetchAdminEmails();
-  }, [formData.environment, adminEmails]);
+  }, [formData.environment, shouldRefetch, step]);
 
   // Fill regions details
   useEffect(() => {
     const fillData = async () => {
       setIsLoading(true);
       try {
-        // Set customer names as Shortnames
-        const allCustomerNamespaces = data.map((customer) => customer.customer);
-        setShortNames(allCustomerNamespaces);
+        // Set Shortnames
+        const infraOnly: Region[] = data.flatMap((customer) =>
+          customer.regions.filter((region) => region.region_name === "Infra")
+        );
+        setShortNames(infraOnly.map((r) => r.namespace));
 
         // Set region names for selected customer
         const customerData = data.find(
