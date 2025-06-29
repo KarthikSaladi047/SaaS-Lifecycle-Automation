@@ -74,3 +74,5 @@ export const log = {
   success: (msg: string) =>
     console.log(`[SUCCESS] ${new Date().toISOString()} ${msg}`),
 };
+
+export const broadCastSlackID = "C0935NGUC6B";

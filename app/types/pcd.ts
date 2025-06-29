@@ -96,8 +96,31 @@ export type DeployRegionPayload = {
   regionname: string;
   use_du_specific_le_http_cert?: boolean;
   options: {
-    multi_region: boolean | string; // If string used in curl, else boolean
+    multi_region: boolean | string;
     skip_components: string;
     chart_url: string;
   };
+};
+
+// for cleanup
+export interface BorkRegion {
+  customer_shortname: string;
+  region_name: string;
+  namespace: string;
+  metadata: {
+    lease_date?: string;
+    owner?: string;
+    lease_counter?: string;
+  };
+}
+
+export interface BorkCustomer {
+  shortname: string;
+  admin_email: string;
+}
+
+export type ExpiringRegion = {
+  fqdn: string;
+  leaseDate: string;
+  ownerEmail: string;
 };

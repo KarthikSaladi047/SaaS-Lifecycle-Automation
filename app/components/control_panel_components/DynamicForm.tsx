@@ -79,7 +79,13 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               id="shortName"
               placeholder="Enter short name"
               value={formData.shortName}
-              onChange={handleInputChange}
+              onChange={(e) => {
+                if (/\s/.test(e.target.value)) return;
+                handleInputChange(e);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === " ") e.preventDefault();
+              }}
               required
               className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
@@ -115,7 +121,13 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               id="regionName"
               placeholder="Enter region name"
               value={formData.regionName}
-              onChange={handleInputChange}
+              onChange={(e) => {
+                if (/\s/.test(e.target.value)) return;
+                handleInputChange(e);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === " ") e.preventDefault();
+              }}
               required
               className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
@@ -142,11 +154,17 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 return (
                   <option
                     key={region}
-                    value={isInfra && hasWorkloadRegions ? "" : region}
-                    disabled={isInfra && hasWorkloadRegions}
+                    value={
+                      isInfra && hasWorkloadRegions && step === "deleteRegion"
+                        ? ""
+                        : region
+                    }
+                    disabled={
+                      isInfra && hasWorkloadRegions && step === "deleteRegion"
+                    }
                   >
                     {region}
-                    {isInfra && hasWorkloadRegions
+                    {isInfra && hasWorkloadRegions && step === "deleteRegion"
                       ? " (Delete other regions first)"
                       : ""}
                   </option>
@@ -170,7 +188,13 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               id="adminEmail"
               placeholder="Enter admin email"
               value={formData.adminEmail}
-              onChange={handleInputChange}
+              onChange={(e) => {
+                if (/\s/.test(e.target.value)) return;
+                handleInputChange(e);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === " ") e.preventDefault();
+              }}
               readOnly={step !== "create"}
               required
               className={`w-full border px-4 py-3 rounded-xl ${
@@ -484,7 +508,13 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               type="text"
               name="token"
               value={formData.token}
-              onChange={handleInputChange}
+              onChange={(e) => {
+                if (/\s/.test(e.target.value)) return;
+                handleInputChange(e);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === " ") e.preventDefault();
+              }}
               className="w-full border px-4 py-2 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-red-500"
               placeholder="Enter Bork Token"
             />
