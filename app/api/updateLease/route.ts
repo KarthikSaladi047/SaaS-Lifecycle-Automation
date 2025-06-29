@@ -34,12 +34,23 @@ export async function POST(req: NextRequest) {
     const res = await fetch(
       `${baseURL}/api/v1/regions/${regionDomain}/metadata`
     );
-    const data = await res.json();
+    const text = await res.text();
 
     if (!res.ok) {
-      log.warn(`Failed to fetch metadata: ${data}`);
+      log.warn(`Failed to fetch metadata: ${text}`);
       return NextResponse.json(
         { message: "Failed to fetch metadata" },
+        { status: 500 }
+      );
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      log.warn("Failed to parse metadata response.");
+      return NextResponse.json(
+        { message: "Failed to parse metadata response" },
         { status: 500 }
       );
     }

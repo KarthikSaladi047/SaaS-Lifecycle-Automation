@@ -31,13 +31,27 @@ export async function POST(req: NextRequest) {
     const res = await fetch(
       `${baseURL}/api/v1/regions/${regionDomain}/metadata`
     );
-
-    const data = await res.json();
+    const text = await res.text();
 
     if (!res.ok) {
-      log.error(`Failed to fetch metadata. Response: ${data}`);
+      log.error(`Failed to fetch metadata. Response: ${text}`);
       return NextResponse.json(
         { message: "Failed to fetch metadata" },
+        { status: 500 }
+      );
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        log.error(`JSON parse error: ${err.message}`);
+      } else {
+        log.warn(`Unknown error while parsing JSON: ${err}`);
+      }
+      return NextResponse.json(
+        { message: "Failed to parse metadata response" },
         { status: 500 }
       );
     }

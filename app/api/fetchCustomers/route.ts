@@ -12,8 +12,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const env = searchParams.get("env");
 
-    log.info(` Incoming GET /customers request with env: ${env}`);
-
     if (!env) {
       log.warn("Missing 'env' query param in request");
       return NextResponse.json(
@@ -23,7 +21,6 @@ export async function GET(req: NextRequest) {
     }
 
     const baseURL = bork_urls[env];
-    log.info(` Fetching customers from: ${baseURL}/api/v1/customers/`);
 
     const response = await axios.get(`${baseURL}/api/v1/customers/`);
     const items = response.data.items;

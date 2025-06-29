@@ -6,8 +6,6 @@ import { bork_urls, log } from "@/app/constants/pcd";
 async function fetchAPIData(env: string): Promise<GroupedData[]> {
   const baseURL = bork_urls[env];
 
-  log.info(` Fetching regions from: ${baseURL}/api/v1/regions`);
-
   const response = await axios.get(`${baseURL}/api/v1/regions`, {
     params: { env },
   });
@@ -18,11 +16,6 @@ async function fetchAPIData(env: string): Promise<GroupedData[]> {
   const groupedMap: Record<string, GroupedData> = {};
 
   for (const item of items) {
-    if (!item.customer_shortname || !item.region_name || !item.fqdn) {
-      log.warn(`Skipping incomplete item: ${JSON.stringify(item)}`);
-      continue;
-    }
-
     const customer = item.customer_shortname.trim().toLowerCase();
 
     if (!groupedMap[customer]) {

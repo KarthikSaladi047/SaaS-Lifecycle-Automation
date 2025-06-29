@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     );
 
     if (!environment || !namespace) {
-      log.warn("Missing required query parameters.");
+      log.warn("[WARN] Missing required query parameters.");
       return NextResponse.json(
         { message: "Missing environment or namespace" },
         { status: 400 }
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     const regionDomain = baseURL.replace("bork", namespace);
     const stateURL = `${baseURL}/api/v1/regions/${regionDomain}/state`;
 
-    log.info(` Sending POST to ${stateURL} with state=ready`);
+    log.info(`Sending POST to ${stateURL} with state=ready`);
 
     const res = await fetch(stateURL, {
       method: "POST",
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    log.success(` Region ${regionDomain} state reset to 'ready'`);
+    log.success(`Region ${regionDomain} state reset to 'ready'`);
     return NextResponse.json({ message: "Region state reset to 'ready'" });
   } catch (e: unknown) {
     if (e instanceof Error) {
