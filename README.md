@@ -113,8 +113,6 @@ A scheduled API endpoint is available for:
 
 ## 🚀 How to Deploy PCD Manager
 
----
-
 ### Clone the project
 
 ```
