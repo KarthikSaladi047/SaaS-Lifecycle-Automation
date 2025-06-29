@@ -1,4 +1,4 @@
-import { bork_urls } from "@/app/constants/pcd";
+import { bork_urls, log } from "@/app/constants/pcd";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -7,12 +7,12 @@ export async function GET(req: NextRequest) {
     const environment = searchParams.get("env");
     const namespace = searchParams.get("namespace");
 
-    console.log(
-      `[INFO] Reset state request received. env=${environment}, namespace=${namespace}`
+    log.info(
+      `Reset state request received. env=${environment}, namespace=${namespace}`
     );
 
     if (!environment || !namespace) {
-      console.warn("[WARN] Missing required query parameters.");
+      log.warn("Missing required query parameters.");
       return NextResponse.json(
         { message: "Missing environment or namespace" },
         { status: 400 }
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     const regionDomain = baseURL.replace("bork", namespace);
     const stateURL = `${baseURL}/api/v1/regions/${regionDomain}/state`;
 
-    console.log(`[INFO] Sending POST to ${stateURL} with state=ready`);
+    log.info(` Sending POST to ${stateURL} with state=ready`);
 
     const res = await fetch(stateURL, {
       method: "POST",
@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
     const text = await res.text();
 
     if (!res.ok) {
-      console.error(
-        `[ERROR] Failed to reset region state. Status: ${res.status}, Body: ${text}`
+      log.error(
+        `Failed to reset region state. Status: ${res.status}, Body: ${text}`
       );
       return NextResponse.json(
         { message: `Failed to set region state: ${text}` },
@@ -45,13 +45,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    console.log(`[SUCCESS] Region ${regionDomain} state reset to 'ready'`);
+    log.success(` Region ${regionDomain} state reset to 'ready'`);
     return NextResponse.json({ message: "Region state reset to 'ready'" });
   } catch (e: unknown) {
     if (e instanceof Error) {
-      console.error("[FATAL] Error resetting task status:", e.message);
+      log.error(`Error resetting task status: ${e.message}`);
     } else {
-      console.error("[FATAL] Unknown error resetting task status:", e);
+      log.error(`Unknown error resetting task status: ${e}`);
     }
 
     return NextResponse.json({ message: "Server error" }, { status: 500 });

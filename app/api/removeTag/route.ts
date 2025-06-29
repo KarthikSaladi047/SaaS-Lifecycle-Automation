@@ -1,4 +1,4 @@
-import { bork_urls } from "@/app/constants/pcd";
+import { bork_urls, log } from "@/app/constants/pcd";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -10,15 +10,13 @@ export async function POST(req: NextRequest) {
 
     // 🔍 Log userEmail and input
     if (userEmail) {
-      console.log(`[INFO] Tag removal requested by: ${userEmail}`);
+      log.info(` Tag removal requested by: ${userEmail}`);
     } else {
-      console.warn("[WARN] No userEmail provided in request body");
+      log.warn("No userEmail provided in request body");
     }
 
     if (!environment || !namespace || !cleanTag) {
-      console.warn(
-        `[WARN] Missing required fields. Received: ${JSON.stringify(body)}`
-      );
+      log.warn(`Missing required fields. Received: ${JSON.stringify(body)}`);
       return NextResponse.json(
         { message: "Missing required fields" },
         { status: 400 }
@@ -29,31 +27,17 @@ export async function POST(req: NextRequest) {
     const regionDomain = baseURL.replace("bork", namespace);
 
     // Step 1: Fetch current metadata
-    console.log(`[INFO] Fetching current metadata for region: ${regionDomain}`);
+    log.info(` Fetching current metadata for region: ${regionDomain}`);
     const res = await fetch(
       `${baseURL}/api/v1/regions/${regionDomain}/metadata`
     );
-    const text = await res.text();
+
+    const data = await res.json();
 
     if (!res.ok) {
-      console.error(`[ERROR] Failed to fetch metadata. Response: ${text}`);
+      log.error(`Failed to fetch metadata. Response: ${data}`);
       return NextResponse.json(
         { message: "Failed to fetch metadata" },
-        { status: 500 }
-      );
-    }
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        console.error(`[ERROR] JSON parse error: ${err.message}`);
-      } else {
-        console.error("[ERROR] Unknown error while parsing JSON:", err);
-      }
-      return NextResponse.json(
-        { message: "Failed to parse metadata response" },
         { status: 500 }
       );
     }
@@ -75,8 +59,8 @@ export async function POST(req: NextRequest) {
       tags: updatedTags.join(","),
     };
 
-    console.log(
-      `[INFO] Updating metadata for ${regionDomain}. Removed tag: "${cleanTag}". New tags: ${updatedTags.join(
+    log.info(
+      `Updating metadata for ${regionDomain}. Removed tag: "${cleanTag}". New tags: ${updatedTags.join(
         ","
       )}`
     );
@@ -93,20 +77,20 @@ export async function POST(req: NextRequest) {
 
     if (!updateRes.ok) {
       const errorText = await updateRes.text();
-      console.error(`[ERROR] Failed to update metadata: ${errorText}`);
+      log.error(`Failed to update metadata: ${errorText}`);
       return NextResponse.json(
         { message: "Failed to update metadata" },
         { status: 500 }
       );
     }
 
-    console.log(`[SUCCESS] Tag "${cleanTag}" removed successfully.`);
+    log.success(` Tag "${cleanTag}" removed successfully.`);
     return NextResponse.json({ message: "Tag removed", tags: updatedTags });
   } catch (err: unknown) {
     if (err instanceof Error) {
-      console.error("Unhandled error during tag removal:", err.message);
+      log.error(`Unhandled error during tag removal: ${err.message}`);
     } else {
-      console.error("Unknown unhandled error:", err);
+      log.error(`Unknown unhandled error: ${err}`);
     }
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }

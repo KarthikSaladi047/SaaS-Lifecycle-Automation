@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import https from "https";
 import fs from "fs/promises";
-import { bork_urls } from "@/app/constants/pcd";
+import { bork_urls, log } from "@/app/constants/pcd";
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -10,9 +10,9 @@ export async function DELETE(req: NextRequest) {
 
     // 🔍 Log user initiating the delete
     if (userEmail) {
-      console.log(`[INFO] Delete requested by userEmail: ${userEmail}`);
+      log.info(` Delete requested by userEmail: ${userEmail}`);
     } else {
-      console.warn("[WARN] No userEmail provided in request body");
+      log.warn("No userEmail provided in request body");
     }
 
     const isInfra = regionName === "Infra";
@@ -30,7 +30,7 @@ export async function DELETE(req: NextRequest) {
 
     // Step 1: Fire-and-forget BURN
     try {
-      console.log(`[INFO] Sending BURN request for region: ${regionDomain}`);
+      log.info(` Sending BURN request for region: ${regionDomain}`);
       const burnReq = https.request(
         {
           hostname: new URL(baseURL).hostname,
@@ -44,29 +44,29 @@ export async function DELETE(req: NextRequest) {
         (res) => {
           res.on("data", () => {});
           res.on("end", () => {
-            console.log(
-              `[INFO] BURN finished for ${regionDomain} with status ${res.statusCode}`
+            log.info(
+              `BURN finished for ${regionDomain} with status ${res.statusCode}`
             );
           });
         }
       );
 
       burnReq.on("error", (err) => {
-        console.warn(`[WARN] BURN request error (ignored): ${err.message}`);
+        log.warn(`BURN request error (ignored): ${err.message}`);
       });
 
       burnReq.end();
     } catch (err: unknown) {
       if (err instanceof Error) {
-        console.warn("[WARN] BURN request failed silently:", err.message);
+        log.warn(`BURN request failed silently: ${err.message}`);
       } else {
-        console.warn("[WARN] Unknown error during BURN request:", err);
+        log.warn(`Unknown error during BURN request: ${JSON.stringify(err)}`);
       }
     }
 
     // Step 2: DELETE customer (if Infra)
     if (isInfra) {
-      console.log(`[INFO] Deleting customer: ${shortName}`);
+      log.info(` Deleting customer: ${shortName}`);
       const deleteCustomer = await fetch(customerUrl, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -74,15 +74,13 @@ export async function DELETE(req: NextRequest) {
 
       if (!deleteCustomer.ok) {
         const errorText = await deleteCustomer.text();
-        console.error(`[ERROR] Customer deletion failed: ${errorText}`);
+        log.warn(`Customer deletion failed: ${errorText}`);
         throw new Error(`Customer deletion failed: ${errorText}`);
       }
     }
 
-    console.log(
-      `[SUCCESS] Region ${regionDomain} deleted${
-        isInfra ? " along with customer" : ""
-      }.`
+    log.success(
+      `Region ${regionDomain} deleted${isInfra ? " along with customer" : ""}.`
     );
 
     return NextResponse.json({
@@ -92,7 +90,7 @@ export async function DELETE(req: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("[FATAL] Delete operation failed:", message);
+    log.error(`Delete operation failed: ${message}`);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

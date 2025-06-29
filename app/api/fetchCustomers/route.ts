@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
-import { bork_urls } from "@/app/constants/pcd";
+import { bork_urls, log } from "@/app/constants/pcd";
 
 interface CustomerItem {
   shortname: string;
@@ -12,10 +12,10 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const env = searchParams.get("env");
 
-    console.log(`[INFO] Incoming GET /customers request with env: ${env}`);
+    log.info(` Incoming GET /customers request with env: ${env}`);
 
     if (!env) {
-      console.warn("[WARN] Missing 'env' query param in request");
+      log.warn("Missing 'env' query param in request");
       return NextResponse.json(
         { error: "Missing 'env' param" },
         { status: 400 }
@@ -23,28 +23,26 @@ export async function GET(req: NextRequest) {
     }
 
     const baseURL = bork_urls[env];
-    console.log(`[INFO] Fetching customers from: ${baseURL}/api/v1/customers/`);
+    log.info(` Fetching customers from: ${baseURL}/api/v1/customers/`);
 
     const response = await axios.get(`${baseURL}/api/v1/customers/`);
     const items = response.data.items;
 
-    console.log(`[INFO] Retrieved ${items.length} customers from ${env}`);
+    log.info(` Retrieved ${items.length} customers from ${env}`);
 
     const filteredResponse = items.map((item: CustomerItem) => ({
       shortname: item.shortname,
       admin_email: item.admin_email,
     }));
 
-    console.log(
-      `[SUCCESS] Returning ${filteredResponse.length} filtered customers`
-    );
+    log.success(`Returning ${filteredResponse.length} filtered customers`);
     return NextResponse.json(filteredResponse);
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error(`[ERROR] Failed to fetch customers: ${error.message}`);
+      log.error(`Failed to fetch customers: ${error.message}`);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    console.error("[ERROR] Unknown error occurred while fetching customers");
+    log.warn("Unknown error occurred while fetching customers");
     return NextResponse.json({ error: "Unknown error" }, { status: 500 });
   }
 }

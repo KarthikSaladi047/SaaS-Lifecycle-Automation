@@ -1,25 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { GroupedData, APIItem } from "@/app/types/pcd";
-import { bork_urls } from "@/app/constants/pcd";
+import { bork_urls, log } from "@/app/constants/pcd";
 
 async function fetchAPIData(env: string): Promise<GroupedData[]> {
   const baseURL = bork_urls[env];
 
-  console.log(`[INFO] Fetching regions from: ${baseURL}/api/v1/regions`);
+  log.info(` Fetching regions from: ${baseURL}/api/v1/regions`);
 
   const response = await axios.get(`${baseURL}/api/v1/regions`, {
     params: { env },
   });
 
   const items: APIItem[] = response.data.items;
-  console.log(`[INFO] Retrieved ${items.length} region records`);
+  log.info(` Retrieved ${items.length} region records`);
 
   const groupedMap: Record<string, GroupedData> = {};
 
   for (const item of items) {
     if (!item.customer_shortname || !item.region_name || !item.fqdn) {
-      console.warn(`[WARN] Skipping incomplete item: ${JSON.stringify(item)}`);
+      log.warn(`Skipping incomplete item: ${JSON.stringify(item)}`);
       continue;
     }
 
@@ -49,7 +49,7 @@ async function fetchAPIData(env: string): Promise<GroupedData[]> {
     a.customer.localeCompare(b.customer)
   );
 
-  console.log(`[SUCCESS] Grouped data for ${result.length} customers`);
+  log.success(` Grouped data for ${result.length} customers`);
   return result;
 }
 
@@ -57,10 +57,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const env = searchParams.get("env");
 
-  console.log(`[INFO] GET /regions called with env: ${env}`);
+  log.info(` GET /regions called with env: ${env}`);
 
   if (!env) {
-    console.warn("[WARN] Missing 'env' param in request");
+    log.warn("Missing 'env' param in request");
     return NextResponse.json({ error: "Missing 'env' param" }, { status: 400 });
   }
 

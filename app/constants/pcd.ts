@@ -62,5 +62,15 @@ export const Tag_suggestions = [
   "Support",
 ];
 
-export const CACHE_TTL = 60 * 1000;
 export const CHARTS_CACHE_TTL = 60 * 60 * 1000;
+
+export const log = {
+  info: (msg: string) =>
+    console.log(`[INFO] ${new Date().toISOString()} ${msg}`),
+  warn: (msg: string) =>
+    console.warn(`[WARN] ${new Date().toISOString()} ${msg}`),
+  error: (msg: string) =>
+    console.error(`[ERROR] ${new Date().toISOString()} ${msg}`),
+  success: (msg: string) =>
+    console.log(`[SUCCESS] ${new Date().toISOString()} ${msg}`),
+};
