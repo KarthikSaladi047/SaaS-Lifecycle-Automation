@@ -153,7 +153,7 @@ export default function ManagePCDPage() {
         case "deleteRegion":
           endpoint = "/api/deleteRegion";
           actionLabel = "Region deletion";
-          responseMessage = `Region "${formData.regionName}" deleted from PCD "${formData.shortName}" successfully!`;
+          responseMessage = `Region "${formData.regionName}" deleted from PCD "${formData.shortName}" Intiated!`;
           break;
 
         case "updateLease":
