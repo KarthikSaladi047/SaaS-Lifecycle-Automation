@@ -40,7 +40,9 @@ export async function POST(req: NextRequest) {
 
     const baseURL = bork_urls[environment];
     const regionPrefix = isInfra ? shortName : `${shortName}-${regionName}`;
-    const regionDomain = baseURL.replace("bork", regionPrefix);
+    const regionDomain = baseURL
+      .replace("https://", "")
+      .replace("bork", regionPrefix);
 
     // Step 1: Create Customer (only for Infra)
     if (isInfra) {

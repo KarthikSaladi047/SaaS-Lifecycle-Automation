@@ -20,7 +20,9 @@ export async function GET(req: NextRequest) {
     }
 
     const baseURL = bork_urls[environment];
-    const regionDomain = baseURL.replace("bork", namespace);
+    const regionDomain = baseURL
+      .replace("https://", "")
+      .replace("bork", namespace);
     const stateURL = `${baseURL}/api/v1/regions/${regionDomain}/state`;
 
     log.info(`Sending POST to ${stateURL} with state=ready`);

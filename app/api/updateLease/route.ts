@@ -26,9 +26,11 @@ export async function POST(req: NextRequest) {
     const isInfra = regionName === "Infra";
     const baseURL = bork_urls[environment];
     const regionPrefix = isInfra ? shortName : `${shortName}-${regionName}`;
-    const regionDomain = baseURL.replace("bork", regionPrefix);
+    const regionDomain = baseURL
+      .replace("https://", "")
+      .replace("bork", regionPrefix);
 
-    log.info(` Fetching current metadata for region: ${regionDomain}`);
+    log.info(`Fetching current metadata for region: ${regionDomain}`);
 
     // Step 1: Fetch current metadata
     const res = await fetch(

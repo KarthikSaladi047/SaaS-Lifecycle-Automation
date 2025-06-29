@@ -25,7 +25,9 @@ export async function DELETE(req: NextRequest) {
     const borkToken = token || (await getTokenFromSecret(environment));
     const baseURL = bork_urls[environment];
     const regionPrefix = isInfra ? shortName : `${shortName}-${regionName}`;
-    const regionDomain = baseURL.replace("bork", regionPrefix);
+    const regionDomain = baseURL
+      .replace("https://", "")
+      .replace("bork", regionPrefix);
     const customerUrl = `${baseURL}/api/v1/customers/${shortName}`;
 
     // Step 1: Fire-and-forget BURN

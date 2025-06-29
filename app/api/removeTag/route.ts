@@ -24,7 +24,9 @@ export async function POST(req: NextRequest) {
     }
 
     const baseURL = bork_urls[environment];
-    const regionDomain = baseURL.replace("bork", namespace);
+    const regionDomain = baseURL
+      .replace("https://", "")
+      .replace("bork", namespace);
 
     // Step 1: Fetch current metadata
     log.info(` Fetching current metadata for region: ${regionDomain}`);
