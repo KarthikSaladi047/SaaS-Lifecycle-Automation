@@ -32,7 +32,7 @@ const Joke = () => {
       <p className="text-gray-700 italic">{joke}</p>
       <button
         onClick={fetchJoke}
-        className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-full transition duration-300 ease-in-out shadow"
+        className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-full transition duration-300 ease-in-out shadow cursor-pointer"
       >
         Tell me another!
       </button>

@@ -14,8 +14,8 @@ export async function POST(req: NextRequest) {
 
     const baseURL =
       environment === "production"
-        ? "https://bork.app.pcd.platform9.com/api/v1"
-        : `https://bork.app.${environment}-pcd.platform9.com/api/v1`;
+        ? "https://bork.app.pcd.platform9.com"
+        : `https://bork.app.${environment}-pcd.platform9.com`;
 
     const regionDomain =
       environment === "production"
@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
         : `${namespace}.app.${environment}-pcd.platform9.com`;
 
     // Step 1: Fetch current metadata
-    const res = await fetch(`${baseURL}/regions/${regionDomain}/metadata`);
+    const res = await fetch(
+      `${baseURL}/api/v1/regions/${regionDomain}/metadata`
+    );
     const text = await res.text();
 
     if (!res.ok) {
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     // Step 3: POST updated metadata
     const updateRes = await fetch(
-      `${baseURL}/regions/${regionDomain}/metadata`,
+      `${baseURL}/api/v1/regions/${regionDomain}/metadata`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

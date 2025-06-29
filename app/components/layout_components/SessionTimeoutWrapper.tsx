@@ -10,10 +10,10 @@ export default function SessionTimeoutWrapper({
 }) {
   useEffect(() => {
     const timeout = setTimeout(() => {
-      signOut(); // auto logout
-    }, 30 * 60 * 1000); // 30 mins
+      signOut({ callbackUrl: "/auth" });
+    }, 60 * 60 * 1000);
 
-    return () => clearTimeout(timeout);
+    return () => clearTimeout(timeout); // cleanup on unmount
   }, []);
 
   return <>{children}</>;

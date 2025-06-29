@@ -3,16 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { environment, namespace, tag } = body;
+    const { environment, shortName, regionName, leaseDate, note } = body;
 
-    const cleanTag = tag?.trim();
-
-    if (!environment || !namespace || !cleanTag) {
+    if (!environment || !leaseDate || !shortName || !regionName) {
       return NextResponse.json(
         { message: "Missing required fields" },
         { status: 400 }
       );
     }
+
+    const isInfra = regionName === "Infra";
 
     const baseURL =
       environment === "production"
@@ -21,8 +21,10 @@ export async function POST(req: NextRequest) {
 
     const regionDomain =
       environment === "production"
-        ? `${namespace}.app.pcd.platform9.com`
-        : `${namespace}.app.${environment}-pcd.platform9.com`;
+        ? `${shortName}${isInfra ? "" : `-${regionName}`}.app.pcd.platform9.com`
+        : `${shortName}${
+            isInfra ? "" : `-${regionName}`
+          }.app.${environment}-pcd.platform9.com`;
 
     // Step 1: Fetch current metadata
     const res = await fetch(
@@ -48,21 +50,17 @@ export async function POST(req: NextRequest) {
     }
 
     const currentMetadata = data.details?.metadata || {};
-    const existingTags = (currentMetadata.tags || "")
-      .split(",")
-      .map((t: string) => t.trim())
-      .filter(Boolean);
+    const currentCounter = parseInt(currentMetadata.lease_counter || "0", 10);
 
-    const updatedTags = existingTags.filter(
-      (t: string) => t.toLowerCase() !== cleanTag.toLowerCase()
-    );
-
+    // Step 2: Prepare updated metadata
     const updatedMetadata = {
       ...currentMetadata,
-      tags: updatedTags.join(","),
+      lease_date: leaseDate,
+      lease_counter: String(currentCounter + 1),
+      note: note,
     };
 
-    // Step 2: POST updated metadata
+    // Step 3: POST updated metadata
     const updateRes = await fetch(
       `${baseURL}/api/v1/regions/${regionDomain}/metadata`,
       {
@@ -79,9 +77,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ message: "Tag removed", tags: updatedTags });
+    return NextResponse.json({
+      message: "Lease updated successfully",
+      lease_counter: updatedMetadata.lease_counter,
+      lease_date: updatedMetadata.lease_date,
+    });
   } catch (e) {
-    console.error("Error removing tag:", e);
+    console.error("Error updating lease:", e);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }

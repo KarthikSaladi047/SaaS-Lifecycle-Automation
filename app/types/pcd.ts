@@ -88,3 +88,16 @@ export interface EnvironmentOption {
   value: string;
   label: string;
 }
+
+export type DeployRegionPayload = {
+  admin_password: string;
+  aim: string;
+  dbbackend: string;
+  regionname: string;
+  use_du_specific_le_http_cert?: boolean;
+  options: {
+    multi_region: boolean | string; // If string used in curl, else boolean
+    skip_components: string;
+    chart_url: string;
+  };
+};

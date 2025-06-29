@@ -12,9 +12,15 @@ export default function HomePage() {
   const router = useRouter();
 
   const [environment, SetEnvironment] = useState("production");
+
   const [tableData, setTableData] = useState<GroupedData[]>([]);
   const [emails, setEmails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+
+  const handleEnvChange = (env: string) => {
+    SetEnvironment(env);
+    localStorage.setItem("selectedEnv", env);
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -50,12 +56,19 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, [environment, status]);
 
+  useEffect(() => {
+    const storedEnv = localStorage.getItem("selectedEnv");
+    if (storedEnv) {
+      SetEnvironment(storedEnv);
+    }
+  }, []);
+
   return (
     <div className="w-full min-h-screen bg-gray-700">
       <NavBar
         isControlPanel={false}
         selectedEnv={environment}
-        onEnvChange={SetEnvironment}
+        onEnvChange={handleEnvChange}
         loading={loading}
       />
       <main className="p-6 space-y-4 items-center">

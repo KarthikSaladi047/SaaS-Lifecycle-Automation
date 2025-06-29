@@ -1,11 +1,11 @@
 import { slackChannelLinks } from "@/app/constants/pcd";
 import Image from "next/image";
-
 interface SuccessMessageProps {
   step: string;
   submissionSuccess: string;
   environment: string;
   resetForm: () => void;
+  isError: boolean;
 }
 
 export default function SuccessMessage({
@@ -13,24 +13,33 @@ export default function SuccessMessage({
   submissionSuccess,
   environment,
   resetForm,
+  isError,
 }: SuccessMessageProps) {
   const isDelete = step === "deleteRegion";
   const isUpgrade = step === "upgrade";
 
-  const imageSrc = isUpgrade
-    ? "/redirect.png"
-    : isDelete
-    ? "/trash.png"
-    : "/tickmark.png";
+  let imageSrc = "/tickmark.png";
+  let altText = "Success";
 
-  const altText = isUpgrade
-    ? "Redirecting"
-    : isDelete
-    ? "Delete Region"
-    : "Success";
+  if (isError) {
+    imageSrc = "/error.png";
+    altText = "Error";
+  } else if (isUpgrade) {
+    imageSrc = "/redirect.png";
+    altText = "Redirecting";
+  } else if (isDelete) {
+    imageSrc = "/trash.png";
+    altText = "Delete Region";
+  }
 
   return (
-    <div className="p-6 bg-green-100 border border-green-400 text-green-700 rounded flex flex-col items-center space-y-4 mt-6">
+    <div
+      className={`p-6 ${
+        isError
+          ? "bg-red-100 border-red-400 text-red-700"
+          : "bg-green-100 border-green-400 text-green-700"
+      } border rounded flex flex-col items-center space-y-4 mt-6`}
+    >
       <Image
         src={imageSrc}
         alt={altText}
@@ -41,7 +50,14 @@ export default function SuccessMessage({
       />
       <p className="text-center text-lg">{submissionSuccess}</p>
 
-      {step !== "upgrade" && (
+      {step === "deleteRegion" && (
+        <p className="text-gray-700 italic">
+          Note: The Deletion Process takes a bit more time than other
+          opertaion...
+        </p>
+      )}
+
+      {step !== "upgrade" && !isError && (
         <a
           href={slackChannelLinks[environment] || ""}
           target="_blank"

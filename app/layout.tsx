@@ -1,7 +1,7 @@
 import "./globals.css";
 import { ReactNode } from "react";
 import { Providers } from "./components/home_components/Provider";
-import SessionTimeoutWrapper from "./components/SessionTimeoutWrapper";
+import SessionTimeoutWrapper from "./components/layout_components/SessionTimeoutWrapper";
 
 export const metadata = {
   title: "PCD Manager",

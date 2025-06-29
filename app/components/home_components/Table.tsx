@@ -27,7 +27,10 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
         if (!res.ok) throw new Error("Failed request");
         return res.json();
       })
-      .then(() => setToastMessage("Task status is reset"))
+      .then(() => {
+        setToastMessage("Task status is reset");
+        window.location.reload(); // Reload page to reflect changes
+      })
       .catch(() => setToastMessage("Failed to reset task status"))
       .finally(() => setConfirmNamespace(null));
   };

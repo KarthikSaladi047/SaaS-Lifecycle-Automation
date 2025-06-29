@@ -510,7 +510,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       )}
       {/* Delete Confirmation */}
       {showDeleteConfirm && step === "deleteRegion" && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-opacity-50 z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-lg">
             <h3 className="text-xl font-semibold mb-4 text-gray-800">
               Are you sure to delete?
