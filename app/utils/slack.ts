@@ -42,7 +42,7 @@ export async function sendBatchSlackMessage(
   // Upload using uploadV2
   await slack.files.uploadV2({
     file: Buffer.from(csvContent),
-    filename: `expiring_regions_${environment}.csv`,
+    filename: `${environment}_expiring_regions.csv`,
     title: `Regions expiring in ${daysBeforeExpiry} day(s)`,
     alt_text: `Expiring region list`,
     channel_id: broadCastSlackID,
