@@ -6,7 +6,8 @@ import { APIItem, ExpiringRegion } from "@/app/types/pcd";
 
 export async function POST(req: NextRequest) {
   try {
-    const { environment } = await req.json();
+    const rawEnv = await req.json();
+    const environment = rawEnv.environment?.trim().toLowerCase();
 
     if (!environment) {
       return NextResponse.json(

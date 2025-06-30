@@ -8,14 +8,17 @@ export async function DELETE(req: NextRequest) {
     const { environment, shortName, regionName, token, userEmail } =
       await req.json();
 
-    // 🔍 Log user initiating the delete
+    const short = shortName.trim().toLowerCase();
+    const region = regionName.trim().toLowerCase();
+
+    // Log userEmail
     if (userEmail) {
-      log.info(` Delete requested by userEmail: ${userEmail}`);
+      log.info(`Delete requested by: ${userEmail}`);
     } else {
       log.warn("No userEmail provided in request body");
     }
 
-    const isInfra = regionName === "Infra";
+    const isInfra = region === "infra";
 
     const getTokenFromSecret = async (env: string) => {
       const secretPath = `/var/run/secrets/platform9/${env}-bork-token`;
@@ -24,15 +27,16 @@ export async function DELETE(req: NextRequest) {
 
     const borkToken = token || (await getTokenFromSecret(environment));
     const baseURL = bork_urls[environment];
-    const regionPrefix = isInfra ? shortName : `${shortName}-${regionName}`;
+
+    const regionPrefix = isInfra ? short : `${short}-${region}`;
     const regionDomain = baseURL
       .replace("https://", "")
       .replace("bork", regionPrefix);
-    const customerUrl = `${baseURL}/api/v1/customers/${shortName}`;
+    const customerUrl = `${baseURL}/api/v1/customers/${short}`;
 
     // Step 1: Fire-and-forget BURN
     try {
-      log.info(` Sending BURN request for region: ${regionDomain}`);
+      log.info(`Sending BURN request for region: ${regionDomain}`);
       const burnReq = https.request(
         {
           hostname: new URL(baseURL).hostname,
@@ -59,16 +63,13 @@ export async function DELETE(req: NextRequest) {
 
       burnReq.end();
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        log.warn(`BURN request failed silently: ${err.message}`);
-      } else {
-        log.warn(`Unknown error during BURN request: ${JSON.stringify(err)}`);
-      }
+      const errMsg = err instanceof Error ? err.message : JSON.stringify(err);
+      log.warn(`BURN request failed silently: ${errMsg}`);
     }
 
     // Step 2: DELETE customer (if Infra)
     if (isInfra) {
-      log.info(` Deleting customer: ${shortName}`);
+      log.info(`Deleting customer: ${short}`);
       const deleteCustomer = await fetch(customerUrl, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -82,7 +83,9 @@ export async function DELETE(req: NextRequest) {
     }
 
     log.success(
-      `Region ${regionDomain} deleted${isInfra ? " along with customer" : ""}.`
+      `✅ Region ${regionDomain} deleted${
+        isInfra ? " along with customer" : ""
+      }.`
     );
 
     return NextResponse.json({

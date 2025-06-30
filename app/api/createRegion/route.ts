@@ -23,7 +23,12 @@ export async function POST(req: NextRequest) {
       tags,
     } = await req.json();
 
-    // 🔍 Track request initiator
+    // Normalize key fields
+    const normalizedShortName = shortName.trim().toLowerCase();
+    const normalizedRegionName = regionName?.trim().toLowerCase();
+    const normalizedAdminEmail = adminEmail.trim().toLowerCase();
+
+    // Log userEmail
     if (userEmail) {
       log.info(`Region deploy requested by userEmail: ${userEmail}`);
     } else {
@@ -35,24 +40,26 @@ export async function POST(req: NextRequest) {
       return (await fs.readFile(secretPath, "utf8")).trim();
     };
 
-    const isInfra = !regionName;
+    const isInfra = !normalizedRegionName;
     const borkToken = !token ? await getTokenFromSecret(environment) : token;
 
     const baseURL = bork_urls[environment];
-    const regionPrefix = isInfra ? shortName : `${shortName}-${regionName}`;
+    const regionPrefix = isInfra
+      ? normalizedShortName
+      : `${normalizedShortName}-${normalizedRegionName}`;
     const regionDomain = baseURL
       .replace("https://", "")
       .replace("bork", regionPrefix);
 
-    // Step 1: Create Customer (only for Infra)
+    // Step 1: Create Customer (Infra only)
     if (isInfra) {
-      log.info(`Creating customer: ${shortName}`);
+      log.info(`Creating customer: ${normalizedShortName}`);
       const createCustomer = await fetch(
-        `${baseURL}/api/v1/customers/${shortName}`,
+        `${baseURL}/api/v1/customers/${normalizedShortName}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ admin_email: adminEmail, aim: AIM }),
+          body: JSON.stringify({ admin_email: normalizedAdminEmail, aim: AIM }),
         }
       );
       if (!createCustomer.ok) {
@@ -69,7 +76,7 @@ export async function POST(req: NextRequest) {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customer: shortName }),
+        body: JSON.stringify({ customer: normalizedShortName }),
       }
     );
     if (!createRegion.ok) {
@@ -78,7 +85,7 @@ export async function POST(req: NextRequest) {
       throw new Error("Region creation failed");
     }
 
-    // Step 3: Deploy Region
+    // Step 3: DEPLOY Region (custom HTTPS method)
     log.info(`Deploying region: ${regionDomain}`);
     const deployResponse = await new Promise<{
       statusCode: number;
@@ -104,7 +111,7 @@ export async function POST(req: NextRequest) {
       );
 
       req.on("error", (err) => {
-        log.error(`HTTPS DEPLOY request failed: ${err}`);
+        log.error(`DEPLOY request failed: ${err}`);
         reject(err);
       });
 
@@ -113,7 +120,7 @@ export async function POST(req: NextRequest) {
           admin_password: adminPassword,
           aim: AIM,
           dbbackend: dbBackend,
-          regionname: isInfra ? "Infra" : regionName,
+          regionname: isInfra ? "Infra" : normalizedRegionName,
           options: {
             multi_region: MULTI_REGION.toString(),
             skip_components: "",
@@ -128,10 +135,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (deployResponse.statusCode >= 400) {
-      console.error(
-        `[ERROR] Deployment failed with status ${deployResponse.statusCode}: ${deployResponse.body}`
+      log.error(
+        `Deployment failed (${deployResponse.statusCode}): ${deployResponse.body}`
       );
-      throw new Error(`Region deployment failed: ${deployResponse.body}`);
+      throw new Error(`Region deployment failed`);
     }
 
     // Step 4: Add Metadata
@@ -158,10 +165,12 @@ export async function POST(req: NextRequest) {
       throw new Error("Metadata addition failed");
     }
 
-    log.success(`Region ${regionName || "Infra"} deployed successfully.`);
+    log.success(
+      `Region ${normalizedRegionName || "Infra"} deployed successfully.`
+    );
     return NextResponse.json({
       message: `${
-        regionName || "Infra"
+        normalizedRegionName || "Infra"
       } region created and deployed successfully`,
     });
   } catch (error: unknown) {
