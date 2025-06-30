@@ -14,6 +14,8 @@ export const environmentOptions = [
   { value: "dev", label: "Dev" },
 ];
 
+export const envList = ["dev", "qa", "staging", "production"];
+
 export const dbBackendOptions = [
   { value: "", label: "Select Database" },
   { value: "mysql", label: "Local MySQL" },

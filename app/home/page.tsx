@@ -11,7 +11,12 @@ export default function HomePage() {
   const { status } = useSession();
   const router = useRouter();
 
-  const [environment, SetEnvironment] = useState("production");
+  const [environment, SetEnvironment] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("selectedEnv") || "production";
+    }
+    return "production";
+  });
 
   const [tableData, setTableData] = useState<GroupedData[]>([]);
   const [emails, setEmails] = useState<Record<string, string>>({});
@@ -55,13 +60,6 @@ export default function HomePage() {
       .catch((err) => console.error("Fetch error:", err))
       .finally(() => setLoading(false));
   }, [environment, status]);
-
-  useEffect(() => {
-    const storedEnv = localStorage.getItem("selectedEnv");
-    if (storedEnv) {
-      SetEnvironment(storedEnv);
-    }
-  }, []);
 
   return (
     <div className="w-full min-h-screen bg-gray-700">

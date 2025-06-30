@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { envList } from "@/app/constants/pcd";
 
 interface NavBarProps {
   isControlPanel: boolean;
@@ -35,8 +36,6 @@ export default function NavBar({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const envList = ["dev", "qa", "staging", "production"];
 
   return (
     <>

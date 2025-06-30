@@ -129,7 +129,8 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
         "Deployed At",
         "Created By",
         "Lease date",
-        "Lease update Count",
+        "Lease Counter",
+        "tags",
       ],
     ];
 
@@ -148,6 +149,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
           region.owner,
           region.lease_date,
           region.lease_counter,
+          region.tags,
         ]);
       });
     });
