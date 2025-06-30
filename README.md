@@ -77,7 +77,7 @@ A scheduled API endpoint is available for:
 ### 2. 📣 Slack Notifications for Expiring Regions
 
 - Sends **Slack batch messages** to a dedicated channel [pcd-lease-notices](https://platform9.slack.com/archives/C0935NGUC6B)
-- Tags all region owners whose regions will expire in **5 days** or **1 day**
+- Tags all region owners whose regions will expire in **7 days** or **1 day**
 - Message includes a table with:
 
   - FQDN
