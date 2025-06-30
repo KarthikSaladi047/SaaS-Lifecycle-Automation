@@ -32,48 +32,20 @@ export async function sendBatchSlackMessage(
 
   const mentionLine = [...uniqueMentions].join(" ");
 
-  const headerText =
-    daysBeforeExpiry === 1
-      ? `*PCD \`${environment}\` Regions expiring tomorrow 🚨*`
-      : `*PCD \`${environment}\` Regions expiring in ${daysBeforeExpiry} days ⏰*`;
+  // Create CSV content
+  const csvHeader = "FQDN,Owner Email,Lease Date\n";
+  const csvRows = regions
+    .map((r) => `${r.fqdn},${r.ownerEmail},${r.leaseDate}`)
+    .join("\n");
+  const csvContent = csvHeader + csvRows;
 
-  const tableHeader = `FQDN                                  Owner                   Lease Date`;
-  const divider = `──────────────────────────────────    ─────────────────────   ──────────`;
-  const rows = regions.map(
-    (r) => `${r.fqdn.padEnd(36)}  ${r.ownerEmail.padEnd(22)}  ${r.leaseDate}`
-  );
-
-  const tableBlock = "```" + [tableHeader, divider, ...rows].join("\n") + "```";
-
-  const blocks = [
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: headerText,
-      },
-    },
-    {
-      type: "context",
-      elements: [
-        {
-          type: "mrkdwn",
-          text: mentionLine,
-        },
-      ],
-    },
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: tableBlock,
-      },
-    },
-  ];
-
-  await slack.chat.postMessage({
-    channel: broadCastSlackID,
-    text: `PCD ${environment} regions expiring in ${daysBeforeExpiry} day(s)`, // fallback
-    blocks,
+  // Upload using uploadV2
+  await slack.files.uploadV2({
+    file: Buffer.from(csvContent),
+    filename: `expiring_regions_${environment}.csv`,
+    title: `Regions expiring in ${daysBeforeExpiry} day(s)`,
+    alt_text: `Expiring region list`,
+    channel_id: broadCastSlackID,
+    initial_comment: `${mentionLine}\n\n*PCD \`${environment}\` Regions expiring in ${daysBeforeExpiry} day(s) 🚨*`,
   });
 }

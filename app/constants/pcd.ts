@@ -61,7 +61,19 @@ export const Tag_suggestions = [
   "Sales",
   "DevOps",
   "SA",
+  "SRE",
+  "QA",
+  "Dev",
+  "Develop",
+  "Delete",
+  "Don't Delete",
+  "Marketing",
   "Support",
+  "POC",
+  "Test Environment",
+  "PCD-V",
+  "PCD-K",
+  "Training",
 ];
 
 export const CHARTS_CACHE_TTL = 60 * 60 * 1000;

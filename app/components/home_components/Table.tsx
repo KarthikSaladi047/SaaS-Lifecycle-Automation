@@ -257,20 +257,24 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                   Task State
                 </th>
                 <th className="px-4 py-3 border border-gray-200 text-left">
-                  Special HTTP Certs Enabled?
-                </th>
-                <th className="px-4 py-3 border border-gray-200 text-left">
                   Deployed At
                 </th>
                 <th className="px-4 py-3 border border-gray-200 text-left">
                   Created By
                 </th>
-                <th className="px-4 py-3 border border-gray-200 text-left">
-                  Lease date
-                </th>
-                <th className="px-4 py-3 border border-gray-200 text-left">
-                  Lease Counter
-                </th>
+                {environment !== "production" && (
+                  <>
+                    <th className="px-4 py-3 border border-gray-200 text-left">
+                      Special HTTP Certs Enabled?
+                    </th>
+                    <th className="px-4 py-3 border border-gray-200 text-left">
+                      Lease date
+                    </th>
+                    <th className="px-4 py-3 border border-gray-200 text-left">
+                      Lease Counter
+                    </th>{" "}
+                  </>
+                )}
                 <th className="px-4 py-3 border border-gray-200 text-left">
                   Tags
                 </th>
@@ -337,21 +341,26 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 border border-gray-200">
-                      {region.use_du_specific_le_http_cert}
-                    </td>
+
                     <td className="px-4 py-3 border border-gray-200">
                       {new Date(region.deployed_at).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 border border-gray-200">
                       {region.owner}
                     </td>
-                    <td className="px-4 py-3 border border-gray-200">
-                      {region.lease_date}
-                    </td>
-                    <td className="px-4 py-3 border border-gray-200">
-                      {region.lease_counter}
-                    </td>
+                    {environment !== "production" && (
+                      <>
+                        <td className="px-4 py-3 border border-gray-200">
+                          {region.use_du_specific_le_http_cert}
+                        </td>
+                        <td className="px-4 py-3 border border-gray-200">
+                          {region.lease_date}
+                        </td>
+                        <td className="px-4 py-3 border border-gray-200">
+                          {region.lease_counter}
+                        </td>
+                      </>
+                    )}
                     <td className="px-4 py-3 border border-gray-200">
                       <div className="flex flex-wrap gap-1">
                         {(Array.isArray(region.tags)

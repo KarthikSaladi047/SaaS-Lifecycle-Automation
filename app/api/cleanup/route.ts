@@ -4,10 +4,12 @@ import { sendBatchSlackMessage } from "@/app/utils/slack";
 import { isBefore, isSameDay, parseISO, addDays, startOfDay } from "date-fns";
 import { APIItem, ExpiringRegion } from "@/app/types/pcd";
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const rawEnv = await req.json();
-    const environment = rawEnv.environment?.trim().toLowerCase();
+    const environment = req.nextUrl.searchParams
+      .get("environment")
+      ?.trim()
+      .toLowerCase();
 
     if (!environment) {
       return NextResponse.json(
@@ -22,11 +24,11 @@ export async function POST(req: NextRequest) {
     const regions: APIItem[] = regionData.items || [];
 
     const today = startOfDay(new Date());
-    const fiveDaysFromNow = addDays(today, 5);
+    const sevenDaysFromNow = addDays(today, 7);
     const oneDayFromNow = addDays(today, 1);
 
     const expiredRegions: APIItem[] = [];
-    const expiringInFiveDays: ExpiringRegion[] = [];
+    const expiringInSevenDays: ExpiringRegion[] = [];
     const expiringTomorrow: ExpiringRegion[] = [];
 
     for (const region of regions) {
@@ -39,8 +41,8 @@ export async function POST(req: NextRequest) {
 
       if (isBefore(lease, today)) {
         expiredRegions.push(region);
-      } else if (isSameDay(lease, fiveDaysFromNow)) {
-        expiringInFiveDays.push({
+      } else if (isSameDay(lease, sevenDaysFromNow)) {
+        expiringInSevenDays.push({
           fqdn: region.fqdn,
           leaseDate,
           ownerEmail,
@@ -77,8 +79,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Send Slack notifications
-    if (expiringInFiveDays.length > 0) {
-      await sendBatchSlackMessage(environment, expiringInFiveDays, 5);
+    if (expiringInSevenDays.length > 0) {
+      await sendBatchSlackMessage(environment, expiringInSevenDays, 7);
     }
 
     if (expiringTomorrow.length > 0) {
@@ -87,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       deleted: expiredRegions.map((r) => r.namespace),
-      notified5Days: expiringInFiveDays.map((r) => r.ownerEmail),
+      notified5Days: expiringInSevenDays.map((r) => r.ownerEmail),
       notifiedTomorrow: expiringTomorrow.map((r) => r.ownerEmail),
     });
   } catch (e) {
