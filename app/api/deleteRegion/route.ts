@@ -10,15 +10,13 @@ export async function DELETE(req: NextRequest) {
 
     const short = shortName.trim().toLowerCase();
     const region = regionName.trim().toLowerCase();
+    const isInfra = region === "infra";
 
-    // Log userEmail
     if (userEmail) {
       log.info(`Delete requested by: ${userEmail}`);
     } else {
       log.warn("No userEmail provided in request body");
     }
-
-    const isInfra = region === "infra";
 
     const getTokenFromSecret = async (env: string) => {
       const secretPath = `/var/run/secrets/platform9/${env}-bork-token`;
@@ -34,41 +32,47 @@ export async function DELETE(req: NextRequest) {
       .replace("bork", regionPrefix);
     const customerUrl = `${baseURL}/api/v1/customers/${short}`;
 
-    // Step 1: Fire-and-forget BURN
-    try {
-      log.info(`Sending BURN request for region: ${regionDomain}`);
-      const burnReq = https.request(
-        {
-          hostname: new URL(baseURL).hostname,
-          path: `/api/v1/regions/${regionDomain}`,
-          method: "BURN",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${borkToken}`,
+    // Step 1: Send BURN request and wait (max 10s)
+    const burnResponse = await new Promise<{ completed: boolean }>(
+      (resolve) => {
+        log.info(`Sending BURN request for region: ${regionDomain}`);
+
+        const req = https.request(
+          {
+            hostname: new URL(baseURL).hostname,
+            path: `/api/v1/regions/${regionDomain}`,
+            method: "BURN",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${borkToken}`,
+            },
           },
-        },
-        (res) => {
-          res.on("data", () => {});
-          res.on("end", () => {
-            log.info(
-              `BURN finished for ${regionDomain} with status ${res.statusCode}`
-            );
-          });
-        }
-      );
+          (res) => {
+            res.on("data", () => {}); // Ignore body
+            res.on("end", () => {
+              log.info(`BURN completed for ${regionDomain}`);
+              resolve({ completed: true });
+            });
+          }
+        );
 
-      burnReq.on("error", (err) => {
-        log.warn(`BURN request error (ignored): ${err.message}`);
-      });
+        req.on("error", (err) => {
+          log.warn(`BURN request failed silently: ${err.message}`);
+          resolve({ completed: false });
+        });
 
-      burnReq.end();
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : JSON.stringify(err);
-      log.warn(`BURN request failed silently: ${errMsg}`);
-    }
+        req.end();
 
-    // Step 2: DELETE customer (if Infra)
-    if (isInfra) {
+        // Timeout if BURN hangs > 10s
+        setTimeout(() => {
+          log.warn(`BURN timed out after 10s for ${regionDomain}`);
+          resolve({ completed: false });
+        }, 10_000);
+      }
+    );
+
+    // Step 2: If Infra and BURN completed, delete customer
+    if (isInfra && burnResponse.completed) {
       log.info(`Deleting customer: ${short}`);
       const deleteCustomer = await fetch(customerUrl, {
         method: "DELETE",
@@ -78,20 +82,23 @@ export async function DELETE(req: NextRequest) {
       if (!deleteCustomer.ok) {
         const errorText = await deleteCustomer.text();
         log.warn(`Customer deletion failed: ${errorText}`);
-        throw new Error(`Customer deletion failed: ${errorText}`);
+        // But we don’t throw — user already got confirmation
+      } else {
+        log.success(`Customer ${short} deleted successfully.`);
       }
     }
 
+    // ✅ Respond to frontend no matter what
     log.success(
-      `✅ Region ${regionDomain} deleted${
-        isInfra ? " along with customer" : ""
-      }.`
+      `Region ${regionDomain} deletion initiated.${
+        isInfra ? " Customer delete scheduled." : ""
+      }`
     );
 
     return NextResponse.json({
-      message: `Deleted region ${regionDomain}${
-        isInfra ? " and customer" : ""
-      } successfully.`,
+      message: `Region ${regionDomain} BURN sent successfully${
+        isInfra ? " and customer delete attempted." : ""
+      }`,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";

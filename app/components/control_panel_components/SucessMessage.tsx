@@ -57,7 +57,7 @@ export default function SuccessMessage({
         </p>
       )}
 
-      {step !== "upgrade" && !isError && (
+      {step !== "upgrade" && step !== "updateLease" && !isError && (
         <a
           href={slackChannelLinks[environment] || ""}
           target="_blank"
