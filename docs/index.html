@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PCD Manager</title>
+    <meta
+      name="description"
+      content="PCD Manager — Control, automate, and manage your Private Cloud with confidence."
+    />
+    <meta
+      name="keywords"
+      content="Private Cloud, Kubernetes, Automation, Dashboard, Platform9"
+    />
+    <meta name="author" content="Platform9 Systems" />
+
+    <link rel="icon" type="image/png" href="images/favicon.png" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              gray: {
+                950: "#0f0f0f",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+      }
+
+      .breadcrumb-btn {
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 0.8;
+        }
+      }
+
+      .active-btn {
+        color: white;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-950 text-white min-h-screen flex flex-col">
+    <main class="flex-1 px-6 pt-10 pb-16 max-w-6xl mx-auto">
+      <!-- Hero Section -->
+      <section class="text-center space-y-6" data-aos="fade-up">
+        <div class="flex justify-center items-center gap-4">
+          <img src="images/favicon.png" alt="PCD Logo" class="h-14 w-14" />
+          <h1 class="text-6xl font-extrabold tracking-tight text-white-500">
+            PCD Manager
+          </h1>
+        </div>
+        <p class="text-xl mx-auto text-gray-300">
+          An elegant dashboard to manage every layer of your Private Cloud
+          lifecycle — from Infra to automation.
+        </p>
+        <div class="w-80 h-1 bg-yellow-500 mx-auto rounded"></div>
+      </section>
+
+      <!-- Visionary Section -->
+      <section class="mt-24 space-y-12 text-center px-6" data-aos="fade-up">
+        <h2 class="text-4xl font-bold text-white-400">
+          Why PCD Manager Matters
+        </h2>
+        <p class="text-lg mx-auto text-gray-300">
+          PCD Manager is more than a dashboard — it’s a unified control plane to
+          simplify cloud lifecycle operations. It enables speed, accuracy, and
+          visibility for your private cloud.
+        </p>
+        <div
+          class="grid grid-cols-1 md:grid-cols-3 gap-6"
+          data-aos="fade-up"
+          data-aos-delay="200"
+        >
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-xl font-semibold text-yellow-300 mb-2">
+              ✅ Reduces Human Error
+            </h3>
+            <p class="text-gray-400 text-sm">
+              Validations, syncs, and stateful tracking prevent
+              misconfiguration.
+            </p>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-xl font-semibold text-yellow-300 mb-2">
+              ⏱ Faster Ops
+            </h3>
+            <p class="text-gray-400 text-sm">
+              Region onboarding, upgrades, and deletes in a few clicks.
+            </p>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-xl font-semibold text-yellow-300 mb-2">
+              📣 Seamless Alerts
+            </h3>
+            <p class="text-gray-400 text-sm">
+              Slack notifications keep teams informed and responsive.
+            </p>
+          </div>
+        </div>
+
+        <hr />
+
+        <section>
+          <h2 class="text-4xl font-bold text-white-400">
+            Unlocking the Power of PCD Manager
+          </h2>
+          <!-- Breadcrumb Navigation -->
+
+          <div
+            class="flex justify-center space-x-4 text-sm font-semibold text-gray-400 my-10"
+          >
+            <button
+              onclick="showSection('auth', this)"
+              title="Authentication features"
+              class="breadcrumb-btn hover:text-white transition"
+              aria-label="Go to Auth Page"
+            >
+              🔐 Auth Page
+            </button>
+            <span>|</span>
+            <button
+              onclick="showSection('home', this)"
+              title="Region list and actions"
+              class="breadcrumb-btn hover:text-white transition"
+            >
+              🏠 Home Page
+            </button>
+            <span>|</span>
+            <button
+              onclick="showSection('control', this)"
+              title="Create, update and delete regions"
+              class="breadcrumb-btn hover:text-white transition"
+            >
+              🛠️ Control Panel
+            </button>
+            <span>|</span>
+            <button
+              onclick="showSection('automation', this)"
+              title="Automation and Slack integrations"
+              class="breadcrumb-btn hover:text-white transition"
+            >
+              🤖 Automation
+            </button>
+          </div>
+
+          <!-- AUTH Section -->
+          <section id="auth" class="mt-16 space-y-6" data-aos="fade-up">
+            <div class="flex flex-wrap justify-center gap-4">
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">🔑 OAuth Login</h3>
+                <p class="text-sm text-gray-300">
+                  Google OAuth restricted to Platform9 users.
+                </p>
+              </div>
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">🕵 Auditing</h3>
+                <p class="text-sm text-gray-300">
+                  Every interaction with the app will be recorded in logs.
+                </p>
+              </div>
+            </div>
+            <img
+              src="images/login.png"
+              alt="Auth Demo"
+              class="w-full rounded-lg border border-gray-700"
+            />
+          </section>
+
+          <!-- HOME Section -->
+          <section id="home" class="hidden mt-16 space-y-6" data-aos="fade-up">
+            <div class="flex flex-wrap justify-center gap-4">
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">📊 Region Overview</h3>
+                <p class="text-sm text-gray-300">
+                  Grouped by customer with task state, lease, tags.
+                </p>
+              </div>
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">🔍 Search & Filter</h3>
+                <p class="text-sm text-gray-300">
+                  Filter by tag, FQDN, owner, environment.
+                </p>
+              </div>
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">🔄 Reset Task</h3>
+                <p class="text-sm text-gray-300">
+                  Set region's task_state back to ready.
+                </p>
+              </div>
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">🏷️ Tag Management</h3>
+                <p class="text-sm text-gray-300">
+                  Add or remove classification tags.
+                </p>
+              </div>
+            </div>
+            <img
+              src="images/home.png"
+              alt="Home Demo"
+              class="w-full rounded-lg border border-gray-700"
+            />
+          </section>
+
+          <!-- CONTROL Section -->
+          <section
+            id="control"
+            class="hidden mt-16 space-y-6"
+            data-aos="fade-up"
+          >
+            <div class="flex flex-wrap justify-center gap-4">
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">🚀 Create Infra</h3>
+                <p class="text-sm text-gray-300">
+                  New Infra region for a customer.
+                </p>
+              </div>
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">➕ Add Region</h3>
+                <p class="text-sm text-gray-300">
+                  Add workload region under PCD.
+                </p>
+              </div>
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">🔁 Update Lease</h3>
+                <p class="text-sm text-gray-300">
+                  Extend lease date, add notes.
+                </p>
+              </div>
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">❌ Delete Region</h3>
+                <p class="text-sm text-gray-300">
+                  Delete workload/Infra + customer.
+                </p>
+              </div>
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">🔗 Tempus Link</h3>
+                <p class="text-sm text-gray-300">
+                  Direct link to upgrade page.
+                </p>
+              </div>
+            </div>
+            <img
+              src="images/cp.png"
+              alt="Control Panel Demo"
+              class="w-full rounded-lg border border-gray-700"
+            />
+          </section>
+
+          <!-- Automation Section -->
+          <section
+            id="automation"
+            class="hidden mt-16 space-y-6"
+            data-aos="fade-up"
+          >
+            <div class="flex flex-wrap justify-center gap-4">
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">🗑 Auto Cleanup</h3>
+                <p class="text-sm text-gray-300">
+                  Automatically deletes expired regions by comparing the current
+                  date with the lease.
+                </p>
+              </div>
+              <div
+                class="bg-gray-800 p-4 rounded-lg border border-gray-700 w-64"
+              >
+                <h3 class="text-lg font-bold mb-1">📣 Slack Alerts</h3>
+                <p class="text-sm text-gray-300">
+                  Sends alert messages 7 or 1 day before lease expiry to region
+                  owners via Slack.
+                </p>
+              </div>
+            </div>
+
+            <img
+              src="images/alerts.png"
+              alt="Automation Demo"
+              class="w-full rounded-lg border border-gray-700"
+            />
+          </section>
+        </section>
+
+        <hr />
+
+        <h2 class="text-4xl font-bold text-white-400 mt-24">
+          Built on Modern Stack
+        </h2>
+        <!-- Tech Stack Section -->
+        <section class="mt-24 space-y-6" data-aos="fade-up">
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-6 items-center">
+            <img src="images/Next-JS.webp" alt="Next.js" class="h-16 mx-auto" />
+            <img src="images/TS.webp" alt="TypeScript" class="h-16 mx-auto" />
+            <img src="images/k8s.png" alt="Kubernetes" class="h-16 mx-auto" />
+            <img
+              src="images/google-icon.svg"
+              alt="Google OAuth"
+              class="h-16 mx-auto"
+            />
+            <img src="images/Slack.png" alt="Slack API" class="h-16 mx-auto" />
+          </div>
+        </section>
+        <p class="text-lg max-w-3xl mx-auto text-gray-300">
+          Built with Next.js, TypeScript, Slack API, and Kubernetes-native
+          workflows.
+        </p>
+
+        <hr />
+        <h2 class="text-4xl font-bold text-white-400 mt-24">Future Roadmap</h2>
+        <div
+          class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left max-w-4xl mx-auto"
+        >
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-yellow-300 font-semibold mb-2">🕵️ Audit Trails</h3>
+            <p class="text-sm text-gray-400">
+              Track who did what, when — for every region change.
+            </p>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-yellow-300 font-semibold mb-2">
+              💬 In-app Notifications
+            </h3>
+            <p class="text-sm text-gray-400">
+              Show lease, sync, and action notifications in real time.
+            </p>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-yellow-300 font-semibold mb-2">
+              📦 Terraform Export
+            </h3>
+            <p class="text-sm text-gray-400">
+              Download Terraform module for any configured region.
+            </p>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-yellow-300 font-semibold mb-2">
+              📊 Usage Analytics
+            </h3>
+            <p class="text-sm text-gray-400">
+              Understand trends across environments and time.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bg-gray-800 text-center py-6 text-gray-400 text-sm">
+      <p>
+        © 2025 Platform9 Systems —
+        <a
+          href="https://github.com/your-username/PCD_Manager"
+          target="_blank"
+          class="underline hover:text-white"
+          >GitHub Repo</a
+        >
+        |
+        <a
+          href="https://github.com/your-username/PCD_Manager/issues"
+          target="_blank"
+          class="underline hover:text-white"
+          >Raise an Issue</a
+        >
+      </p>
+    </footer>
+
+    <script>
+      AOS.init({ duration: 1000, once: true });
+
+      function showSection(id, clickedBtn) {
+        const sections = ["auth", "home", "control", "automation"];
+        sections.forEach((s) => {
+          document.getElementById(s).classList.add("hidden");
+        });
+        document.getElementById(id).classList.remove("hidden");
+
+        // Remove active + animation from all, then set only on clicked
+        const buttons = document.querySelectorAll(
+          ".breadcrumb-btn, .active-btn"
+        );
+        buttons.forEach((btn) => {
+          btn.classList.remove("active-btn");
+          btn.classList.remove("breadcrumb-btn");
+        });
+
+        clickedBtn.classList.add("active-btn");
+      }
+
+      // Optional: gentle hint popup after 3s for first-time visitor
+      window.addEventListener("DOMContentLoaded", () => {
+        setTimeout(() => {
+          if (!sessionStorage.getItem("hint-shown")) {
+            alert("Click on the sections below the title to explore features.");
+            sessionStorage.setItem("hint-shown", "true");
+          }
+        }, 3000);
+      });
+    </script>
+  </body>
+</html>
