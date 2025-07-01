@@ -48,12 +48,13 @@ export default function NavBar({
               <div>
                 <Image src="/logo.svg" alt="Logo" width={200} height={10} />
               </div>
-
               {/* Center: Title */}
               <div className="absolute left-1/2 transform -translate-x-1/2 text-xl font-bold drop-shadow-md">
-                PCD Manager
+                <div className="flex items-center space-x-2">
+                  <Image src="/favicon.png" alt="logo" width={25} height={25} />
+                  <span className="text-xl font-semibold">PCD Manager</span>
+                </div>
               </div>
-
               {/* Right: Control Button + Avatar */}
               <div
                 className="flex items-center space-x-4 relative"
