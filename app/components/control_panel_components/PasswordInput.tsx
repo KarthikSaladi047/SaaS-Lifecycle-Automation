@@ -15,7 +15,7 @@ export default function PasswordInput({ value, onChange }: PasswordInputProps) {
       <input
         type={show ? "text" : "password"}
         name="adminPassword"
-        placeholder="Admin Password"
+        placeholder="Enter Admin Password"
         value={value}
         onChange={onChange}
         required

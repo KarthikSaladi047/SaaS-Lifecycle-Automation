@@ -281,7 +281,10 @@ export default function ManagePCDPage() {
         }
 
         // Set form defaults if adding a region
-        if (step === "addRegion" && formData.shortName) {
+        if (
+          (step === "addRegion" || step === "updateLease") &&
+          formData.shortName
+        ) {
           const matchedItem = adminEmails.find(
             (item) => item.shortname === formData.shortName
           );

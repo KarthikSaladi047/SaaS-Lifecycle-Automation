@@ -77,7 +77,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               type="text"
               name="shortName"
               id="shortName"
-              placeholder="Enter short name"
+              placeholder="Enter Short Name"
               value={formData.shortName}
               onChange={(e) => {
                 if (/\s/.test(e.target.value)) return;
@@ -119,7 +119,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               type="text"
               name="regionName"
               id="regionName"
-              placeholder="Enter region name"
+              placeholder="Enter Region Name"
               value={formData.regionName}
               onChange={(e) => {
                 if (/\s/.test(e.target.value)) return;
@@ -186,7 +186,11 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               type="email"
               name="adminEmail"
               id="adminEmail"
-              placeholder="Enter admin email"
+              placeholder={
+                step === "create"
+                  ? "Enter Admin Email Address"
+                  : "Will be same as Infra Region"
+              }
               value={formData.adminEmail}
               onChange={(e) => {
                 if (/\s/.test(e.target.value)) return;
@@ -195,7 +199,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               onKeyDown={(e) => {
                 if (e.key === " ") e.preventDefault();
               }}
-              readOnly={step !== "create"}
+              disabled={step !== "create"}
               required
               className={`w-full border px-4 py-3 rounded-xl ${
                 step !== "create"
@@ -221,60 +225,71 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
             <label htmlFor="dbBackend" className="block text-gray-700 mb-1">
               DB Backend
             </label>
-            <select
-              name="dbBackend"
-              id="dbBackend"
-              value={formData.dbBackend}
-              onChange={handleInputChange}
-              required
-              disabled={step === "addRegion"}
-              className={`w-full border px-4 py-3 rounded-xl cursor-pointer ${
-                step === "addRegion"
-                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                  : "focus:outline-none focus:ring-2 focus:ring-blue-400"
-              }`}
-            >
-              {dbBackendOptions.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            {step === "create" ? (
+              <select
+                name="dbBackend"
+                id="dbBackend"
+                value={formData.dbBackend}
+                onChange={handleInputChange}
+                required
+                className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+              >
+                {dbBackendOptions.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                name="dbBackend"
+                id="dbBackend"
+                value={formData.dbBackend}
+                disabled
+                placeholder="Will be same as Infra region"
+                className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+              />
+            )}
           </div>
 
           <div className="w-full">
             <label htmlFor="charturl" className="block text-gray-700 mb-1">
               Chart Version
             </label>
-            <select
-              name="charturl"
-              id="charturl"
-              value={formData.charturl}
-              onChange={handleInputChange}
-              required={step === "create"}
-              disabled={step === "addRegion"}
-              className={`w-full border px-4 py-3 rounded-xl cursor-pointer ${
-                step === "addRegion"
-                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                  : "focus:outline-none focus:ring-2 focus:ring-blue-400"
-              }`}
-            >
-              <option value="">Choose PCD Version</option>
-              {step === "create" &&
-                charts.map(({ version, location }) => (
+            {step === "create" ? (
+              <select
+                name="charturl"
+                id="charturl"
+                value={formData.charturl}
+                onChange={handleInputChange}
+                required
+                className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+              >
+                <option value="">Choose PCD Version</option>
+                {charts.map(({ version, location }) => (
                   <option key={location} value={location}>
                     {version}
                   </option>
                 ))}
-              {step === "addRegion" && (
-                <option
-                  key={getFilenameWithoutExtension(formData.charturl)}
+              </select>
+            ) : (
+              <>
+                {/* Hidden actual value to keep it in the form */}
+                <input
+                  type="hidden"
+                  name="charturl"
                   value={formData.charturl}
-                >
-                  {getFilenameWithoutExtension(formData.charturl)}
-                </option>
-              )}
-            </select>
+                />
+                {/* Display-only input with filename */}
+                <input
+                  id="dbBackend"
+                  disabled
+                  defaultValue={getFilenameWithoutExtension(formData.charturl)}
+                  placeholder="Will be same as Infra region"
+                  className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+                />
+              </>
+            )}
           </div>
         </div>
       )}
@@ -288,7 +303,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 htmlFor="leaseSelector"
                 className="block text-gray-700 mb-1"
               >
-                Lease Duration
+                {step === "updateLease"
+                  ? "Set New Lease Duration"
+                  : "Lease Duration"}
               </label>
               <select
                 id="leaseSelector"
@@ -342,7 +359,6 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 Lease Expiry Date
               </label>
               <input
-                type="date"
                 name="leaseDate"
                 id="leaseDate"
                 value={formData.leaseDate}
@@ -352,6 +368,11 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                   new Date(Date.now() + 24 * 60 * 60 * 1000)
                     .toISOString()
                     .split("T")[0]
+                }
+                placeholder={
+                  formData.shortName && !formData.leaseDate
+                    ? "Not set Previously"
+                    : "dd/mm/yyy"
                 }
                 required
                 className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
@@ -489,7 +510,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         <input
           type="text"
           name="note"
-          placeholder="Enter Reason for Extending the Lease!"
+          placeholder="Enter Reason for Extending/Shortening the Lease!"
           value={formData.note}
           onChange={handleInputChange}
           required
