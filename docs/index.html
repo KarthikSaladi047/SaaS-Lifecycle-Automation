@@ -62,6 +62,22 @@
       .active-btn {
         color: white;
       }
+      .typewriter {
+        display: inline-block;
+        white-space: nowrap;
+        overflow: hidden;
+        width: 0;
+        animation: typing 3s steps(52, end) forwards;
+      }
+
+      @keyframes typing {
+        from {
+          width: 0;
+        }
+        to {
+          width: 52ch;
+        }
+      }
     </style>
   </head>
   <body class="bg-gray-950 text-white min-h-screen flex flex-col">
@@ -74,11 +90,10 @@
             PCD Manager
           </h1>
         </div>
-        <p class="text-xl mx-auto text-gray-300">
-          An elegant dashboard to manage every layer of your Private Cloud
-          lifecycle — from Infra to automation.
+        <div class="w-[42%] h-1 bg-yellow-500 mx-auto rounded"></div>
+        <p class="text-xl mx-auto text-gray-300 typewriter">
+          An elegant application to manage every layer of your PCD lifecycle.
         </p>
-        <div class="w-80 h-1 bg-yellow-500 mx-auto rounded"></div>
       </section>
 
       <!-- Visionary Section -->
@@ -88,8 +103,8 @@
         </h2>
         <p class="text-lg mx-auto text-gray-300">
           PCD Manager is more than a dashboard — it’s a unified control plane to
-          simplify cloud lifecycle operations. It enables speed, accuracy, and
-          visibility for your private cloud.
+          simplify PCDs lifecycle operations. It enables speed, accuracy, and
+          visibility for your PCD.
         </p>
         <div
           class="grid grid-cols-1 md:grid-cols-3 gap-6"
@@ -184,7 +199,8 @@
               >
                 <h3 class="text-lg font-bold mb-1">🕵 Auditing</h3>
                 <p class="text-sm text-gray-300">
-                  Every interaction with the app will be recorded in logs.
+                  Every interaction with the app will be recorded with user
+                  email in logs.
                 </p>
               </div>
             </div>
@@ -355,37 +371,58 @@
         <hr />
         <h2 class="text-4xl font-bold text-white-400 mt-24">Future Roadmap</h2>
         <div
-          class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left max-w-4xl mx-auto"
+          class="grid grid-cols-1 md:grid-cols-4 gap-6 text-left max-w-4xl mx-auto"
         >
           <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
-            <h3 class="text-yellow-300 font-semibold mb-2">🕵️ Audit Trails</h3>
+            <h3 class="text-yellow-300 font-semibold mb-2">Audit Trails</h3>
             <p class="text-sm text-gray-400">
               Track who did what, when — for every region change.
             </p>
           </div>
           <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
             <h3 class="text-yellow-300 font-semibold mb-2">
-              💬 In-app Notifications
+              In-app Notifications
             </h3>
             <p class="text-sm text-gray-400">
-              Show lease, sync, and action notifications in real time.
+              All important actions are alerted via Slack. Who, What & When
+              Created/Deleted/Updated.
+            </p>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-yellow-300 font-semibold mb-2">Usage Trachking</h3>
+            <p class="text-sm text-gray-400">
+              What resources are being cosumed by each user/team.
             </p>
           </div>
           <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
             <h3 class="text-yellow-300 font-semibold mb-2">
-              📦 Terraform Export
+              Host/Clusters Details
             </h3>
-            <p class="text-sm text-gray-400">
-              Download Terraform module for any configured region.
-            </p>
+            <p class="text-sm text-gray-400">View all the Host Details Live.</p>
           </div>
           <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
-            <h3 class="text-yellow-300 font-semibold mb-2">
-              📊 Usage Analytics
-            </h3>
+            <h3 class="text-yellow-300 font-semibold mb-2">Usage Analytics</h3>
             <p class="text-sm text-gray-400">
               Understand trends across environments and time.
             </p>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-yellow-300 font-semibold mb-2">
+              PCD DU Resource details
+            </h3>
+            <p class="text-sm text-gray-400">
+              Display pod/deploymemt/stateful set count (running/desired)
+            </p>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-yellow-300 font-semibold mb-2">Granual Control</h3>
+            <p class="text-sm text-gray-400">
+              More granual permission using roles.
+            </p>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 class="text-yellow-300 font-semibold mb-2">Cost Analytics</h3>
+            <p class="text-sm text-gray-400">Tracking Every doller spent.</p>
           </div>
         </div>
       </section>
@@ -395,14 +432,14 @@
       <p>
         © 2025 Platform9 Systems —
         <a
-          href="https://github.com/your-username/PCD_Manager"
+          href="https://github.com/KarthikSaladi-pf9/PCD_Manager"
           target="_blank"
           class="underline hover:text-white"
           >GitHub Repo</a
         >
         |
         <a
-          href="https://github.com/your-username/PCD_Manager/issues"
+          href="https://github.com/KarthikSaladi-pf9/PCD_Manager/issues"
           target="_blank"
           class="underline hover:text-white"
           >Raise an Issue</a
@@ -431,16 +468,6 @@
 
         clickedBtn.classList.add("active-btn");
       }
-
-      // Optional: gentle hint popup after 3s for first-time visitor
-      window.addEventListener("DOMContentLoaded", () => {
-        setTimeout(() => {
-          if (!sessionStorage.getItem("hint-shown")) {
-            alert("Click on the sections below the title to explore features.");
-            sessionStorage.setItem("hint-shown", "true");
-          }
-        }, 3000);
-      });
     </script>
   </body>
 </html>
