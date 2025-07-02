@@ -309,6 +309,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               </label>
               <select
                 id="leaseSelector"
+                disabled={formData.regionName === ""}
                 onChange={(e) => {
                   const val = e.target.value;
                   const now = new Date();
@@ -327,7 +328,11 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                     },
                   } as React.ChangeEvent<HTMLInputElement>);
                 }}
-                className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+                className={`w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                  formData.regionName === ""
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : "cursor-pointer"
+                }`}
               >
                 <option value="">Select Duration</option>
                 {(formData.environment === "dev" ||
