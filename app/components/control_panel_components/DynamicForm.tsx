@@ -32,6 +32,8 @@ interface DynamicFormProps {
   setSubmissionSuccess: (val: string | null) => void;
   resetForm: () => void;
   getFilenameWithoutExtension: (url: string) => string;
+  showCustomInput: boolean;
+  setShowCustomInput: (val: boolean) => void;
 }
 
 const DynamicForm: React.FC<DynamicFormProps> = ({
@@ -53,6 +55,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   setSubmissionSuccess,
   resetForm,
   getFilenameWithoutExtension,
+  setShowCustomInput,
+  showCustomInput,
 }) => {
   const currentEnvType = environmentOptions.find(
     (env) => env.value === formData.environment
@@ -93,7 +97,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           ? "Add Region"
           : step === "deleteRegion"
           ? "Delete Region"
-          : "Update Lease"}
+          : step === "updateLease"
+          ? "Update Lease"
+          : "Upgrade Region"}
       </h2>
 
       {/* Short Name + Region Name */}
@@ -161,7 +167,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               required
               className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-          ) : ["deleteRegion", "updateLease"].includes(step) ? (
+          ) : ["deleteRegion", "updateLease", "upgrade"].includes(step) ? (
             <select
               name="regionName"
               id="regionName"
@@ -249,60 +255,95 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       )}
 
       {/* DB Backend + Chart URL */}
-      {["create", "addRegion"].includes(step) && (
+      {["create", "addRegion", "upgrade"].includes(step) && (
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="w-full">
-            <label htmlFor="dbBackend" className="block text-gray-700 mb-1">
-              DB Backend
-            </label>
-            {step === "create" ? (
-              <select
-                name="dbBackend"
-                id="dbBackend"
-                value={formData.dbBackend}
-                onChange={handleInputChange}
-                required
-                className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
-              >
-                <option value="">Choose a Database </option>
-                {dbBackendOptions.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                name="dbBackend"
-                id="dbBackend"
-                value={formData.dbBackend}
-                disabled
-                placeholder="Will be same as Infra region"
-                className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
-              />
-            )}
-          </div>
+          {step !== "upgrade" && (
+            <div className="w-full">
+              <label htmlFor="dbBackend" className="block text-gray-700 mb-1">
+                DB Backend
+              </label>
+              {step === "create" ? (
+                <select
+                  name="dbBackend"
+                  id="dbBackend"
+                  value={formData.dbBackend}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+                >
+                  <option value="">Choose a Database </option>
+                  {dbBackendOptions.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  name="dbBackend"
+                  id="dbBackend"
+                  value={formData.dbBackend}
+                  disabled
+                  placeholder="Will be same as Infra region"
+                  className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+                />
+              )}
+            </div>
+          )}
 
           <div className="w-full">
             <label htmlFor="charturl" className="block text-gray-700 mb-1">
               Chart Version
             </label>
-            {step === "create" ? (
-              <select
-                name="charturl"
-                id="charturl"
-                value={formData.charturl}
-                onChange={handleInputChange}
-                required
-                className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
-              >
-                <option value="">Choose PCD Version</option>
-                {charts.map(({ version, location }) => (
-                  <option key={location} value={location}>
-                    {version}
-                  </option>
-                ))}
-              </select>
+            {step === "create" || step === "upgrade" ? (
+              <>
+                {!showCustomInput && (
+                  <select
+                    name="charturl"
+                    id="charturl"
+                    value={formData.charturl}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      if (e.target.value !== "custom") {
+                        setShowCustomInput(false);
+                      } else {
+                        setShowCustomInput(true);
+                      }
+                    }}
+                    required
+                    className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+                  >
+                    <option value="">Choose PCD Version</option>
+                    {charts.map(({ version, location }) => (
+                      <option key={location} value={location}>
+                        {version}
+                      </option>
+                    ))}
+                    {step === "create" && (
+                      <option value="custom">Custom URL</option>
+                    )}
+                  </select>
+                )}
+
+                {showCustomInput && (
+                  <input
+                    type="text"
+                    name="charturl"
+                    placeholder="Enter custom chart URL"
+                    value={
+                      formData.charturl === "custom" ? "" : formData.charturl
+                    }
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        charturl: e.target.value,
+                      }))
+                    }
+                    required
+                    className="w-full border px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                )}
+              </>
             ) : (
               <>
                 {/* Hidden actual value to keep it in the form */}
@@ -395,7 +436,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       )}
 
       {/* HTTP Certs */}
-      {["create", "addRegion"].includes(step) && isNonProd && (
+      {["create", "addRegion", "upgrade"].includes(step) && isNonProd && (
         <div className="flex items-center space-x-3 cursor-pointer">
           <input
             type="checkbox"
@@ -636,6 +677,25 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           Reset Form
         </span>
       </div>
+      {/* Note */}
+      {step === "upgrade" && (
+        <div className="mt-4 text-gray-700">
+          Note: If you like to schedule this upgrade for later, you can do so
+          using{" "}
+          <a
+            href={
+              environmentOptions.find((e) => e.value === formData.environment)
+                ?.tempusUrl || "#"
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 underline hover:text-blue-800"
+          >
+            Tempus
+          </a>
+          .
+        </div>
+      )}
     </form>
   );
 };

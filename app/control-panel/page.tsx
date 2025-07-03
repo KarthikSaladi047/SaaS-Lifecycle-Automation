@@ -63,6 +63,7 @@ export default function ManagePCDPage() {
   const [isError, setIsError] = useState(false);
   const prevEnvRef = useRef<string | null>(null);
   const [shouldRefetch, setShouldRefetch] = useState(false);
+  const [showCustomInput, setShowCustomInput] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     environment: "",
     shortName: "",
@@ -105,6 +106,7 @@ export default function ManagePCDPage() {
     setShowDeleteConfirm(false);
     setDeleteConfirmInput("");
     setIsError(false);
+    setShowCustomInput(false);
   };
   const currentEnvType = environmentOptions.find(
     (env) => env.value === formData.environment
@@ -174,6 +176,12 @@ export default function ManagePCDPage() {
           responseMessage = `Lease updated for PCD "${formData.shortName}", Region "${formData.regionName}"!`;
           break;
 
+        case "upgrade":
+          endpoint = "/api/upgradeRegion";
+          actionLabel = "Upgrade Region";
+          responseMessage = `Upgrade Intiated for PCD "${formData.shortName}", Region "${formData.regionName}"!`;
+          break;
+
         default:
           console.warn("Unknown step");
           return;
@@ -213,12 +221,12 @@ export default function ManagePCDPage() {
 
   // fetch complete Data
   useEffect(() => {
-    if (formData.environment !== prevEnvRef.current && step !== "upgrade") {
+    if (formData.environment !== prevEnvRef.current) {
       resetForm();
       prevEnvRef.current = formData.environment;
     }
 
-    if (formData.environment && step !== "upgrade") {
+    if (formData.environment) {
       const fetchGroupedData = async () => {
         setIsLoading(true);
         try {
@@ -244,7 +252,7 @@ export default function ManagePCDPage() {
       resetForm();
       prevEnvRef.current = formData.environment;
     }
-    if (!formData.environment && step !== "upgrade") return;
+    if (!formData.environment) return;
 
     const fetchAdminEmails = async () => {
       setIsLoading(true);
@@ -289,9 +297,11 @@ export default function ManagePCDPage() {
           );
         }
 
-        // Set form defaults if adding a region
+        // Set form defaults
         if (
-          (step === "addRegion" || step === "updateLease") &&
+          (step === "addRegion" ||
+            step === "updateLease" ||
+            step === "upgrade") &&
           formData.shortName
         ) {
           const matchedItem = adminEmails.find(
@@ -327,26 +337,14 @@ export default function ManagePCDPage() {
     fillData();
   }, [formData.environment, formData.shortName, step, data, adminEmails]);
 
-  // remove form and upgrade
+  // remove form
   useEffect(() => {
     resetForm();
     if (!formData.environment) {
       setStep("select");
       return;
     }
-    if (step === "upgrade") {
-      const selectedEnv = environmentOptions.find(
-        (env) => env.value === formData.environment
-      );
-      if (!selectedEnv) {
-        throw new Error(`Unknown environment: ${formData.environment}`);
-      }
-      const targetURL = selectedEnv.tempusUrl;
-      setSubmissionSuccess("Redirecting to tempus!");
-      router.push(targetURL);
-      return;
-    }
-  }, [formData.environment, step, router]);
+  }, [formData.environment, step]);
 
   // Get PCD charts from Tempus on load silently
   useEffect(() => {
@@ -493,6 +491,8 @@ export default function ManagePCDPage() {
                   submissionSuccess={submissionSuccess}
                   setSubmissionSuccess={setSubmissionSuccess}
                   resetForm={resetForm}
+                  setShowCustomInput={setShowCustomInput}
+                  showCustomInput={showCustomInput}
                   getFilenameWithoutExtension={getFilenameWithoutExtension}
                 />
               ))
