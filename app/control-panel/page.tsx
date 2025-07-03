@@ -72,6 +72,7 @@ export default function ManagePCDPage() {
     dbBackend: "",
     charturl: "",
     leaseDate: "",
+    leaseDuration: "",
     cluster: "",
     use_du_specific_le_http_cert: "",
     userEmail: "",
@@ -90,6 +91,7 @@ export default function ManagePCDPage() {
       adminPassword: "",
       regionName: "",
       leaseDate: "",
+      leaseDuration: "",
       dbBackend: "",
       charturl: "",
       cluster: "",
@@ -304,11 +306,14 @@ export default function ManagePCDPage() {
             (r) => r.region_name === "Infra"
           );
 
+          const defaultDbBackend =
+            dbBackendOptions.find((opt) => opt.isDefault)?.value || "";
+
           setFormData((prev) => ({
             ...prev,
             adminEmail: matchedItem?.admin_email ?? "",
             charturl: matchedInfraRegion?.chart_url || "",
-            dbBackend: "mysql",
+            dbBackend: defaultDbBackend,
             use_du_specific_le_http_cert:
               matchedInfraRegion?.use_du_specific_le_http_cert ?? "false",
           }));

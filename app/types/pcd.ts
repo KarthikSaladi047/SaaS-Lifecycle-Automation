@@ -27,6 +27,7 @@ export interface FormData {
   dbBackend: string;
   charturl: string;
   leaseDate: string;
+  leaseDuration: string;
   cluster: string;
   use_du_specific_le_http_cert: string;
   userEmail: string;

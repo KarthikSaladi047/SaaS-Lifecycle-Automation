@@ -264,6 +264,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 required
                 className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
               >
+                <option value="">Choose a Database </option>
                 {dbBackendOptions.map(({ value, label }) => (
                   <option key={value} value={value}>
                     {label}
@@ -335,6 +336,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
             </label>
             <select
               id="leaseSelector"
+              value={formData.leaseDuration}
               onChange={(e) => {
                 const val = e.target.value;
                 const now = new Date();
@@ -346,12 +348,11 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                   leaseDate.setMonth(now.getMonth() + parseInt(val));
                 }
 
-                handleInputChange({
-                  target: {
-                    name: "leaseDate",
-                    value: leaseDate.toISOString().split("T")[0],
-                  },
-                } as React.ChangeEvent<HTMLInputElement>);
+                setFormData((prev) => ({
+                  ...prev,
+                  leaseDuration: val,
+                  leaseDate: leaseDate.toISOString().split("T")[0],
+                }));
               }}
               className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
             >
@@ -392,6 +393,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           </div>
         </div>
       )}
+
       {/* HTTP Certs */}
       {["create", "addRegion"].includes(step) && isNonProd && (
         <div className="flex items-center space-x-3 cursor-pointer">

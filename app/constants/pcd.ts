@@ -64,8 +64,7 @@ export const environmentOptions = [
 ];
 
 export const dbBackendOptions = [
-  { value: "", label: "Choose Database" },
-  { value: "mysql", label: "Local MySQL" },
+  { value: "mysql", label: "Local MySQL", isDefault: true },
 ];
 
 export const tempusUrl = "https://tempus-prod.platform9.horse/api/v1/releases";
