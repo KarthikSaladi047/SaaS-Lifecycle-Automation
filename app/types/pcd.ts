@@ -5,6 +5,7 @@ export interface APIItem {
   namespace: string;
   task_state: string;
   deployed_at: string;
+  cluster: string;
   options?: {
     chart_url?: string;
   };
@@ -26,6 +27,7 @@ export interface FormData {
   dbBackend: string;
   charturl: string;
   leaseDate: string;
+  cluster: string;
   use_du_specific_le_http_cert: string;
   userEmail: string;
   note: string;
@@ -59,6 +61,7 @@ export type Region = {
   deployed_at: string;
   chart_url: string;
   owner: string;
+  cluster: string;
   use_du_specific_le_http_cert: string;
   lease_date: string;
   lease_counter: string;

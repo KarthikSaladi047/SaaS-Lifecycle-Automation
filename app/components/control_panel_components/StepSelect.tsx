@@ -18,6 +18,11 @@ export default function StepSelect({
   handleInputChange,
   setStep,
 }: StepSelectProps) {
+  const currentEnvType = environmentOptions.find(
+    (env) => env.value === formData.environment
+  )?.type;
+  const isProd = currentEnvType === "prod";
+
   return (
     <>
       {" "}
@@ -77,12 +82,7 @@ export default function StepSelect({
               color: "yellow",
             },
           ].map(({ label, step: targetStep, color, envRestricted }) => {
-            const selectedEnv = environmentOptions.find(
-              (opt) => opt.value === formData.environment
-            );
-
-            const disabled =
-              (envRestricted && selectedEnv?.isProd) || !formData.environment;
+            const disabled = (envRestricted && isProd) || !formData.environment;
             return (
               <button
                 key={label}

@@ -253,10 +253,10 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                   Namespace
                 </th>
                 <th className="px-4 py-3 border border-gray-200 text-left">
-                  FQDN
+                  PCD Version
                 </th>
                 <th className="px-4 py-3 border border-gray-200 text-left">
-                  PCD Version
+                  Dataplane
                 </th>
                 <th className="px-4 py-3 border border-gray-200 text-left">
                   Task State
@@ -266,12 +266,12 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                 </th>
                 {isNonProd && (
                   <th className="px-4 py-3 border border-gray-200 text-left">
-                    Created By
+                    Owner
                   </th>
                 )}
                 {isNonProd && (
                   <th className="px-4 py-3 border border-gray-200 text-left">
-                    Special HTTP Certs Enabled?
+                    LE Cert?
                   </th>
                 )}
                 {isNonProd && (
@@ -281,7 +281,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                 )}
                 {isNonProd && (
                   <th className="px-4 py-3 border border-gray-200 text-left">
-                    Lease Counter
+                    Renewals
                   </th>
                 )}
                 <th className="px-4 py-3 border border-gray-200 text-left">
@@ -319,32 +319,45 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                     <td className="px-4 py-3 border border-gray-200">
                       {region.region_name}
                     </td>
-                    <td className="px-4 py-3 border border-gray-200">
-                      {region.namespace}
-                    </td>
                     <td className="px-4 py-3 border border-gray-200 break-all text-blue-600">
                       <a
                         href={`https://${region.fqdn}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        {region.fqdn}
+                        {region.namespace}
                       </a>
                     </td>
                     <td className="px-4 py-3 border border-gray-200">
                       {getFilenameWithoutExtension(region.chart_url)}
                     </td>
+                    <td className="px-4 py-3 border border-gray-200">
+                      {region.cluster
+                        .replace(/^.*?-/, "")
+                        .replace(/\.app\..*$/, "")}
+                    </td>
                     <td className="px-4 py-3 border border-gray-200 capitalize">
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-2 relative group">
                         <span>{region.task_state}</span>
                         {region.task_state.toLowerCase() !== "ready" && (
-                          <button
-                            onClick={() => setConfirmFQDN(region.fqdn)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Reset task status"
-                          >
-                            ↗
-                          </button>
+                          <>
+                            <button
+                              onClick={() => setConfirmFQDN(region.fqdn)}
+                              disabled={!region.task_state}
+                              className={`text-blue-600 hover:text-blue-800 cursor-pointer ${
+                                !region.task_state
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : ""
+                              }`}
+                            >
+                              ↻
+                            </button>
+                            {region.task_state && (
+                              <div className="absolute top-full mt-1 left-0 w-max bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow">
+                                Click to reset task status
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
@@ -436,7 +449,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="bg-black text-white p-6 rounded-lg shadow-lg max-w-sm text-center space-y-4">
             <p>
-              Do you want to reset task status of PCD Region{" "}
+              Do you want to reset task status of PCD{" "}
               <strong>{confirmFQND}</strong>?
             </p>
             <div className="flex justify-center gap-4">

@@ -58,9 +58,11 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     (env) => env.value === formData.environment
   )?.type;
   const isNonProd = currentEnvType !== "prod";
+
   function getEnvType(envValue: string | undefined): string | undefined {
     return environmentOptions.find((opt) => opt.value === envValue)?.type;
   }
+
   const envType = getEnvType(formData.environment);
   let leaseOptions: { value: string; label: string }[] = [];
 

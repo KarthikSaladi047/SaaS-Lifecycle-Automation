@@ -34,6 +34,7 @@ async function fetchAPIData(env: string): Promise<GroupedData[]> {
       deployed_at: item.deployed_at,
       chart_url: item.options?.chart_url || "",
       owner: item.metadata?.owner || "",
+      cluster: item.cluster,
       use_du_specific_le_http_cert:
         item.metadata?.use_du_specific_le_http_cert || "false",
       lease_date: item.metadata?.lease_date || "",
