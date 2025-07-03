@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useEffect, useRef } from "react";
 import PasswordInput from "./PasswordInput";
 import { FormData, Step } from "@/app/types/pcd";
 import { environmentOptions, Tag_suggestions } from "@/app/constants/pcd";
@@ -58,6 +59,22 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   setShowCustomInput,
   showCustomInput,
 }) => {
+  const tokenInputRef = useRef<HTMLInputElement | null>(null);
+  const deleteInputRef = useRef<HTMLInputElement | null>(null);
+
+  // set focus on models
+  useEffect(() => {
+    if (showTokenInput && tokenInputRef.current) {
+      tokenInputRef.current.focus();
+    }
+  }, [showTokenInput]);
+
+  useEffect(() => {
+    if (showDeleteConfirm && deleteInputRef.current) {
+      deleteInputRef.current.focus();
+    }
+  }, [showDeleteConfirm]);
+
   const currentEnvType = environmentOptions.find(
     (env) => env.value === formData.environment
   )?.type;
@@ -303,14 +320,19 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                     id="charturl"
                     value={formData.charturl}
                     onChange={(e) => {
-                      handleInputChange(e);
-                      if (e.target.value !== "custom") {
-                        setShowCustomInput(false);
-                      } else {
+                      const value = e.target.value;
+                      if (value === "custom") {
+                        setFormData((prev) => ({
+                          ...prev,
+                          charturl: "custom",
+                        }));
                         setShowCustomInput(true);
+                      } else {
+                        setFormData((prev) => ({ ...prev, charturl: value }));
+                        setShowCustomInput(false);
                       }
                     }}
-                    required
+                    required={!showCustomInput}
                     className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
                   >
                     <option value="">Choose PCD Version</option>
@@ -354,9 +376,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 />
                 {/* Display-only input with filename */}
                 <input
-                  id="dbBackend"
+                  id="displayCharturl"
                   disabled
-                  defaultValue={getFilenameWithoutExtension(formData.charturl)}
+                  value={getFilenameWithoutExtension(formData.charturl)}
                   placeholder="Will be same as Infra region"
                   className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
                 />
@@ -574,12 +596,17 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
 
       {/* Token &*/}
       {showTokenInput && (
-        <div className="fixed inset-0 flex items-center justify-center bg-opacity-50 z-50">
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-opacity-50 z-50"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-lg">
             <h3 className="text-xl font-semibold mb-4">
               Enter Production Bork Token
             </h3>
             <input
+              ref={tokenInputRef}
               type="text"
               name="token"
               value={formData.token}
@@ -616,7 +643,11 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       )}
       {/* Delete Confirmation */}
       {showDeleteConfirm && step === "deleteRegion" && (
-        <div className="fixed inset-0 flex items-center justify-center bg-opacity-50 z-50">
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-opacity-50 z-50"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-lg">
             <h3 className="text-xl font-semibold mb-4 text-gray-800">
               Are you sure to delete?
@@ -629,6 +660,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               to confirm.
             </p>
             <input
+              ref={deleteInputRef}
               type="text"
               value={deleteConfirmInput}
               onChange={(e) => setDeleteConfirmInput(e.target.value)}
