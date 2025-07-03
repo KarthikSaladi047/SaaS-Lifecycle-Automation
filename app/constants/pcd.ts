@@ -7,26 +7,66 @@ export const colorClasses: Record<string, string> = {
 };
 
 export const environmentOptions = [
-  { value: "", label: "Select Environment" },
-  { value: "production", label: "Production" },
-  { value: "staging", label: "Staging" },
-  { value: "qa", label: "QA" },
-  { value: "dev", label: "Dev" },
+  {
+    value: "us-dev",
+    label: "US Dev",
+    tempusUrl: "https://tempus-dev.platform9.horse",
+    slackChannel: "https://platform9.slack.com/archives/C01E7254V9V",
+    borkUrl: "https://bork.app.dev-pcd.platform9.com",
+    type: "dev",
+    domain: ".app.dev-pcd.platform9.com",
+  },
+  {
+    value: "us-qa",
+    label: "US QA",
+    tempusUrl: "https://tempus-dev.platform9.horse",
+    slackChannel: "https://platform9.slack.com/archives/C08G0RZG1A6",
+    borkUrl: "https://bork.app.qa-pcd.platform9.com",
+    type: "qa",
+    domain: ".app.qa-pcd.platform9.com",
+  },
+  {
+    value: "eu-stage",
+    label: "EU Stage",
+    tempusUrl: "https://tempus-prod.platform9.horse",
+    slackChannel: "https://platform9.slack.com/archives/C08GP881QSC",
+    borkUrl: "https://bork.eu-central-1.app.staging-pcd.platform9.com",
+    type: "stage",
+    domain: ".app.staging-pcd.platform9.com",
+  },
+  {
+    value: "us-stage",
+    label: "US Stage",
+    tempusUrl: "https://tempus-prod.platform9.horse",
+    slackChannel: "https://platform9.slack.com/archives/C08GP881QSC",
+    borkUrl: "https://bork.app.staging-pcd.platform9.com",
+    type: "stage",
+    domain: ".app.staging-pcd.platform9.com",
+  },
+  {
+    value: "eu-prod",
+    label: "EU Prod",
+    tempusUrl: "https://tempus-prod.platform9.horse",
+    slackChannel: "https://platform9.slack.com/archives/C037R987G",
+    borkUrl: "https://bork.eu-central-1.app.pcd.platform9.com",
+    type: "prod",
+    domain: ".app.pcd.platform9.com",
+  },
+  {
+    value: "us-prod",
+    label: "US Prod",
+    tempusUrl: "https://tempus-prod.platform9.horse",
+    slackChannel: "https://platform9.slack.com/archives/C037R987G",
+    borkUrl: "https://bork.app.pcd.platform9.com",
+    type: "prod",
+    domain: ".app.pcd.platform9.com",
+  },
 ];
-
-export const envList = ["dev", "qa", "staging", "production"];
 
 export const dbBackendOptions = [
   { value: "", label: "Choose Database" },
   { value: "mysql", label: "Local MySQL" },
 ];
-
-export const slackChannelLinks: Record<string, string> = {
-  production: "https://platform9.slack.com/archives/C037R987G",
-  staging: "https://platform9.slack.com/archives/C08GP881QSC",
-  qa: "https://platform9.slack.com/archives/C08G0RZG1A6",
-  dev: "https://platform9.slack.com/archives/C01E7254V9V",
-};
 
 export const tempusUrl = "https://tempus-prod.platform9.horse/api/v1/releases";
 
@@ -41,20 +81,6 @@ export const tagColors = [
   "bg-teal-100 text-teal-800",
   "bg-orange-100 text-orange-800",
 ];
-
-export const tempus_urls: Record<string, string> = {
-  production: "https://tempus-prod.platform9.horse",
-  staging: "https://tempus-prod.platform9.horse",
-  qa: "https://tempus-dev.platform9.horse",
-  dev: "https://tempus-dev.platform9.horse",
-};
-
-export const bork_urls: Record<string, string> = {
-  production: "https://bork.app.pcd.platform9.com",
-  staging: "https://bork.app.staging-pcd.platform9.com",
-  qa: "https://bork.app.qa-pcd.platform9.com",
-  dev: "https://bork.app.dev-pcd.platform9.com",
-};
 
 export const Tag_suggestions = [
   "Reproducer",

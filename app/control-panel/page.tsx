@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "../components/common_components/NavBar";
 import { useSession } from "next-auth/react";
-import { CHARTS_CACHE_TTL } from "../constants/pcd";
+import { CHARTS_CACHE_TTL, environmentOptions } from "../constants/pcd";
 
 import {
   Step,
@@ -16,7 +16,7 @@ import {
   Region,
 } from "../types/pcd";
 
-import { dbBackendOptions, tempus_urls, tempusUrl } from "../constants/pcd";
+import { dbBackendOptions, tempusUrl } from "../constants/pcd";
 import StepSelect from "../components/control_panel_components/StepSelect";
 import SuccessMessage from "../components/control_panel_components/SucessMessage";
 import DynamicForm from "../components/control_panel_components/DynamicForm";
@@ -102,6 +102,11 @@ export default function ManagePCDPage() {
     setDeleteConfirmInput("");
     setIsError(false);
   };
+  const currentEnvType = environmentOptions.find(
+    (env) => env.value === formData.environment
+  )?.type;
+
+  const isProd = currentEnvType === "prod";
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -117,7 +122,7 @@ export default function ManagePCDPage() {
     e.preventDefault();
 
     try {
-      if (formData.environment === "production" && !showTokenInput) {
+      if (isProd && !showTokenInput) {
         setShowTokenInput(true);
         return;
       }
@@ -324,7 +329,13 @@ export default function ManagePCDPage() {
       return;
     }
     if (step === "upgrade") {
-      const targetURL = tempus_urls[formData.environment];
+      const selectedEnv = environmentOptions.find(
+        (env) => env.value === formData.environment
+      );
+      if (!selectedEnv) {
+        throw new Error(`Unknown environment: ${formData.environment}`);
+      }
+      const targetURL = selectedEnv.tempusUrl;
       setSubmissionSuccess("Redirecting to tempus!");
       router.push(targetURL);
       return;

@@ -1,29 +1,33 @@
-import { bork_urls, log } from "@/app/constants/pcd";
+import { environmentOptions, log } from "@/app/constants/pcd";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const environment = searchParams.get("env");
-    const namespace = searchParams.get("namespace");
+    const fqdn = searchParams.get("fqdn");
 
-    log.info(
-      `Reset state request received. env=${environment}, namespace=${namespace}`
-    );
+    log.info(`Reset state request received. env=${environment}, fqdn=${fqdn}`);
 
-    if (!environment || !namespace) {
+    if (!environment || !fqdn) {
       log.warn("[WARN] Missing required query parameters.");
       return NextResponse.json(
-        { message: "Missing environment or namespace" },
+        { message: "Missing environment or fqdn" },
         { status: 400 }
       );
     }
 
-    const baseURL = bork_urls[environment];
-    const regionDomain = baseURL
-      .replace("https://", "")
-      .replace("bork", namespace);
-    const stateURL = `${baseURL}/api/v1/regions/${regionDomain}/state`;
+    const selectedEnv = environmentOptions.find((e) => e.value === environment);
+
+    if (!selectedEnv?.borkUrl) {
+      log.error(`Invalid environment: ${environment}`);
+      return NextResponse.json(
+        { message: "Invalid environment" },
+        { status: 400 }
+      );
+    }
+
+    const stateURL = `${selectedEnv.borkUrl}/api/v1/regions/${fqdn}/state`;
 
     log.info(`Sending POST to ${stateURL} with state=ready`);
 
@@ -47,7 +51,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    log.success(`Region ${regionDomain} state reset to 'ready'`);
+    log.success(`${fqdn} state reset to 'ready'`);
     return NextResponse.json({ message: "Region state reset to 'ready'" });
   } catch (e: unknown) {
     if (e instanceof Error) {

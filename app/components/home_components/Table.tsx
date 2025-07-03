@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { GroupedData } from "../../types/pcd";
-import { tagColors } from "@/app/constants/pcd";
+import { environmentOptions, tagColors } from "@/app/constants/pcd";
 
 type TableProps = {
   data: GroupedData[];
@@ -10,17 +10,22 @@ type TableProps = {
 };
 
 const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
-  const [confirmNamespace, setConfirmNamespace] = useState<string | null>(null);
+  const [confirmFQND, setConfirmFQDN] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [tagInputs, setTagInputs] = useState<Record<string, string>>({});
   const [localData, setLocalData] = useState<GroupedData[]>(data);
+  const currentEnvType = environmentOptions.find(
+    (env) => env.value === environment
+  )?.type;
+
+  const isNonProd = currentEnvType !== "prod";
 
   const handleConfirm = () => {
-    if (!confirmNamespace) return;
+    if (!confirmFQND) return;
     fetch(
-      `/api/resetTaskStatus?env=${environment}&namespace=${encodeURIComponent(
-        confirmNamespace
+      `/api/resetTaskStatus?env=${environment}&fqdn=${encodeURIComponent(
+        confirmFQND
       )}`
     )
       .then((res) => {
@@ -32,7 +37,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
         window.location.reload(); // Reload page to reflect changes
       })
       .catch(() => setToastMessage("Failed to reset task status"))
-      .finally(() => setConfirmNamespace(null));
+      .finally(() => setConfirmFQDN(null));
   };
 
   // tag color selector
@@ -47,7 +52,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
   };
 
   // Add Tags
-  const handleAddTag = (namespace: string, newTag: string) => {
+  const handleAddTag = (fqdn: string, newTag: string) => {
     const cleanTag = newTag.trim();
 
     if (!cleanTag) return;
@@ -55,7 +60,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
     fetch("/api/addTag", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ environment, namespace, tag: cleanTag }),
+      body: JSON.stringify({ environment, fqdn, tag: cleanTag }),
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to add tag");
@@ -66,7 +71,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
           prevData.map((group) => ({
             ...group,
             regions: group.regions.map((region) =>
-              region.namespace === namespace
+              region.fqdn === fqdn
                 ? {
                     ...region,
                     tags: data.tags || [], // from server response
@@ -81,7 +86,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
   };
 
   // Remove Tags
-  const handleRemoveTag = (namespace: string, tagToRemove: string) => {
+  const handleRemoveTag = (fqdn: string, tagToRemove: string) => {
     const cleanTag = tagToRemove.trim();
 
     if (!cleanTag) return;
@@ -89,7 +94,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
     fetch("/api/removeTag", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ environment, namespace, tag: cleanTag }),
+      body: JSON.stringify({ environment, fqdn, tag: cleanTag }),
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to remove tag");
@@ -100,7 +105,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
           prevData.map((group) => ({
             ...group,
             regions: group.regions.map((region) =>
-              region.namespace === namespace
+              region.fqdn === fqdn
                 ? {
                     ...region,
                     tags: data.tags || [], // use tags from backend
@@ -259,20 +264,22 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                 <th className="px-4 py-3 border border-gray-200 text-left">
                   Deployed At
                 </th>
-                <th className="px-4 py-3 border border-gray-200 text-left">
-                  Created By
-                </th>
-                {environment !== "production" && (
+                {isNonProd && (
+                  <th className="px-4 py-3 border border-gray-200 text-left">
+                    Created By
+                  </th>
+                )}
+                {isNonProd && (
                   <th className="px-4 py-3 border border-gray-200 text-left">
                     Special HTTP Certs Enabled?
                   </th>
                 )}
-                {environment !== "production" && (
+                {isNonProd && (
                   <th className="px-4 py-3 border border-gray-200 text-left">
                     Lease date
                   </th>
                 )}
-                {environment !== "production" && (
+                {isNonProd && (
                   <th className="px-4 py-3 border border-gray-200 text-left">
                     Lease Counter
                   </th>
@@ -332,9 +339,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                         <span>{region.task_state}</span>
                         {region.task_state.toLowerCase() !== "ready" && (
                           <button
-                            onClick={() =>
-                              setConfirmNamespace(region.namespace)
-                            }
+                            onClick={() => setConfirmFQDN(region.fqdn)}
                             className="text-blue-600 hover:text-blue-800"
                             title="Reset task status"
                           >
@@ -347,20 +352,22 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                     <td className="px-4 py-3 border border-gray-200">
                       {new Date(region.deployed_at).toLocaleString()}
                     </td>
-                    <td className="px-4 py-3 border border-gray-200">
-                      {region.owner}
-                    </td>
-                    {environment !== "production" && (
+                    {isNonProd && (
+                      <td className="px-4 py-3 border border-gray-200">
+                        {region.owner}
+                      </td>
+                    )}
+                    {isNonProd && (
                       <td className="px-4 py-3 border border-gray-200">
                         {region.use_du_specific_le_http_cert}
                       </td>
                     )}
-                    {environment !== "production" && (
+                    {isNonProd && (
                       <td className="px-4 py-3 border border-gray-200">
                         {region.lease_date}
                       </td>
                     )}
-                    {environment !== "production" && (
+                    {isNonProd && (
                       <td className="px-4 py-3 border border-gray-200">
                         {region.lease_counter}
                       </td>
@@ -382,9 +389,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                           >
                             {tag}
                             <button
-                              onClick={() =>
-                                handleRemoveTag(region.namespace, tag)
-                              }
+                              onClick={() => handleRemoveTag(region.fqdn, tag)}
                               className="ml-1 text-red-500 hover:text-red-700 text-xs"
                             >
                               ×
@@ -406,7 +411,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                             e.preventDefault();
                             const newTag = tagInputs[region.namespace]?.trim();
                             if (newTag) {
-                              handleAddTag(region.namespace, newTag);
+                              handleAddTag(region.fqdn, newTag);
                               setTagInputs((prev) => ({
                                 ...prev,
                                 [region.namespace]: "",
@@ -427,12 +432,12 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
       </div>
 
       {/* Confirmation Modal */}
-      {confirmNamespace && (
+      {confirmFQND && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="bg-black text-white p-6 rounded-lg shadow-lg max-w-sm text-center space-y-4">
             <p>
               Do you want to reset task status of PCD Region{" "}
-              <strong>{confirmNamespace}</strong>?
+              <strong>{confirmFQND}</strong>?
             </p>
             <div className="flex justify-center gap-4">
               <button
@@ -442,7 +447,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                 Yes
               </button>
               <button
-                onClick={() => setConfirmNamespace(null)}
+                onClick={() => setConfirmFQDN(null)}
                 className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded"
               >
                 No

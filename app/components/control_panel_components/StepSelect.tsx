@@ -36,6 +36,7 @@ export default function StepSelect({
           required
           className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
         >
+          <option value="">Select an Environment</option>
           {environmentOptions.map(({ value, label }) => (
             <option key={value} value={value}>
               {label}
@@ -76,11 +77,12 @@ export default function StepSelect({
               color: "yellow",
             },
           ].map(({ label, step: targetStep, color, envRestricted }) => {
-            const disabled =
-              (envRestricted &&
-                !["qa", "staging", "dev"].includes(formData.environment)) ||
-              !formData.environment;
+            const selectedEnv = environmentOptions.find(
+              (opt) => opt.value === formData.environment
+            );
 
+            const disabled =
+              (envRestricted && selectedEnv?.isProd) || !formData.environment;
             return (
               <button
                 key={label}

@@ -1,7 +1,7 @@
+import { environmentOptions, log } from "@/app/constants/pcd";
 import { NextRequest, NextResponse } from "next/server";
 import https from "https";
 import fs from "fs/promises";
-import { bork_urls, log } from "@/app/constants/pcd";
 
 const AIM = "opencloud";
 const MULTI_REGION = true;
@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
       tags,
     } = await req.json();
 
-    // Normalize key fields
     const normalizedShortName = shortName.trim().toLowerCase();
     const normalizedRegionName = regionName?.trim().toLowerCase();
     const normalizedAdminEmail = adminEmail.trim().toLowerCase();
@@ -35,35 +34,44 @@ export async function POST(req: NextRequest) {
       log.warn("No userEmail provided in request body");
     }
 
-    const getTokenFromSecret = async (env: string) => {
-      const secretPath = `/var/run/secrets/platform9/${env}-bork-token`;
-      return (await fs.readFile(secretPath, "utf8")).trim();
-    };
+    // Validate env
+    const selectedEnv = environmentOptions.find((e) => e.value === environment);
+    if (!selectedEnv?.borkUrl || !selectedEnv?.domain) {
+      log.error(`Invalid environment: ${environment}`);
+      return NextResponse.json(
+        { error: "Invalid environment" },
+        { status: 400 }
+      );
+    }
 
     const isInfra = !normalizedRegionName;
-    const borkToken = !token ? await getTokenFromSecret(environment) : token;
+    const borkToken =
+      token ||
+      (
+        await fs.readFile(
+          `/var/run/secrets/platform9/${environment}-bork-token`,
+          "utf8"
+        )
+      ).trim();
 
-    const baseURL = bork_urls[environment];
     const regionPrefix = isInfra
       ? normalizedShortName
       : `${normalizedShortName}-${normalizedRegionName}`;
-    const regionDomain = baseURL
-      .replace("https://", "")
-      .replace("bork", regionPrefix);
+    const regionDomain = `${regionPrefix}${selectedEnv.domain}`;
 
-    // Step 1: Create Customer (Infra only)
+    // Step 1: Create Customer (only for Infra)
     if (isInfra) {
       log.info(`Creating customer: ${normalizedShortName}`);
-      const createCustomer = await fetch(
-        `${baseURL}/api/v1/customers/${normalizedShortName}`,
+      const res = await fetch(
+        `${selectedEnv.borkUrl}/api/v1/customers/${normalizedShortName}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ admin_email: normalizedAdminEmail, aim: AIM }),
         }
       );
-      if (!createCustomer.ok) {
-        const errText = await createCustomer.text();
+      if (!res.ok) {
+        const errText = await res.text();
         log.error(`Customer creation failed: ${errText}`);
         throw new Error("Customer creation failed");
       }
@@ -71,29 +79,29 @@ export async function POST(req: NextRequest) {
 
     // Step 2: Create Region
     log.info(`Creating region: ${regionDomain}`);
-    const createRegion = await fetch(
-      `${baseURL}/api/v1/regions/${regionDomain}`,
+    const regionRes = await fetch(
+      `${selectedEnv.borkUrl}/api/v1/regions/${regionDomain}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ customer: normalizedShortName }),
       }
     );
-    if (!createRegion.ok) {
-      const errText = await createRegion.text();
+    if (!regionRes.ok) {
+      const errText = await regionRes.text();
       log.error(`Region creation failed: ${errText}`);
       throw new Error("Region creation failed");
     }
 
-    // Step 3: DEPLOY Region (custom HTTPS method)
+    // Step 3: DEPLOY Region
     log.info(`Deploying region: ${regionDomain}`);
     const deployResponse = await new Promise<{
       statusCode: number;
       body: string;
     }>((resolve, reject) => {
-      const req = https.request(
+      const reqDeploy = https.request(
         {
-          hostname: new URL(baseURL).hostname,
+          hostname: new URL(selectedEnv.borkUrl).hostname,
           path: `/api/v1/regions/${regionDomain}`,
           method: "DEPLOY",
           headers: {
@@ -110,12 +118,12 @@ export async function POST(req: NextRequest) {
         }
       );
 
-      req.on("error", (err) => {
+      reqDeploy.on("error", (err) => {
         log.error(`DEPLOY request failed: ${err}`);
         reject(err);
       });
 
-      req.write(
+      reqDeploy.write(
         JSON.stringify({
           admin_password: adminPassword,
           aim: AIM,
@@ -131,20 +139,21 @@ export async function POST(req: NextRequest) {
           }),
         })
       );
-      req.end();
+
+      reqDeploy.end();
     });
 
     if (deployResponse.statusCode >= 400) {
       log.error(
         `Deployment failed (${deployResponse.statusCode}): ${deployResponse.body}`
       );
-      throw new Error(`Region deployment failed`);
+      throw new Error("Region deployment failed");
     }
 
     // Step 4: Add Metadata
     log.info(`Adding metadata to region: ${regionDomain}`);
-    const addMetadata = await fetch(
-      `${baseURL}/api/v1/regions/${regionDomain}/metadata`,
+    const metadataRes = await fetch(
+      `${selectedEnv.borkUrl}/api/v1/regions/${regionDomain}/metadata`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -159,8 +168,8 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    if (!addMetadata.ok) {
-      const errText = await addMetadata.text();
+    if (!metadataRes.ok) {
+      const errText = await metadataRes.text();
       log.error(`Metadata addition failed: ${errText}`);
       throw new Error("Metadata addition failed");
     }

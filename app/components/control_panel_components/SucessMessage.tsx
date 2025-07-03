@@ -1,5 +1,6 @@
-import { slackChannelLinks } from "@/app/constants/pcd";
 import Image from "next/image";
+import { environmentOptions } from "@/app/constants/pcd";
+
 interface SuccessMessageProps {
   step: string;
   submissionSuccess: string;
@@ -17,6 +18,9 @@ export default function SuccessMessage({
 }: SuccessMessageProps) {
   const isDelete = step === "deleteRegion";
   const isUpgrade = step === "upgrade";
+
+  const envMeta = environmentOptions.find((env) => env.value === environment);
+  const slackUrl = envMeta?.slackChannel ?? "";
 
   let imageSrc = "/tickmark.png";
   let altText = "Success";
@@ -50,16 +54,16 @@ export default function SuccessMessage({
       />
       <p className="text-center text-lg">{submissionSuccess}</p>
 
-      {step === "deleteRegion" && (
+      {isDelete && (
         <p className="text-gray-700 italic">
           Note: The Deletion Process takes a bit more time than other
-          opertaion...
+          operations...
         </p>
       )}
 
-      {step !== "upgrade" && step !== "updateLease" && !isError && (
+      {step !== "upgrade" && step !== "updateLease" && !isError && slackUrl && (
         <a
-          href={slackChannelLinks[environment] || ""}
+          href={slackUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="underline text-blue-600 hover:text-blue-800"

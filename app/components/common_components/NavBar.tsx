@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { envList } from "@/app/constants/pcd";
+import { environmentOptions } from "@/app/constants/pcd";
 
 interface NavBarProps {
   isControlPanel: boolean;
@@ -103,23 +103,23 @@ export default function NavBar({
           {!isControlPanel && (
             <div className="w-full flex justify-center">
               <div className="bg-gray-800 text-white px-6 py-2 mt-[-1px] shadow-lg rounded-b-xl backdrop-blur-sm bg-opacity-90 animate-slide-down flex space-x-6">
-                {envList.map((env) => (
+                {environmentOptions.map((env) => (
                   <button
-                    key={env}
+                    key={env.value}
                     disabled={loading}
                     className={`relative transition duration-200 ease-in-out px-2 py-1 font-medium
-                      ${loading ? "opacity-50 cursor-not-allowed" : ""}
-                      after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-0.5 after:w-full after:transition-all
-                      ${
-                        selectedEnv === env
-                          ? "text-yellow-400 after:bg-yellow-400"
-                          : "hover:text-green-300 after:bg-transparent hover:after:bg-green-300 cursor-pointer"
-                      }`}
+      ${loading ? "opacity-50 cursor-not-allowed" : ""}
+      after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-0.5 after:w-full after:transition-all
+      ${
+        selectedEnv === env.value
+          ? "text-yellow-400 after:bg-yellow-400"
+          : "hover:text-green-300 after:bg-transparent hover:after:bg-green-300 cursor-pointer"
+      }`}
                     onClick={() => {
-                      if (!loading) onEnvChange?.(env);
+                      if (!loading) onEnvChange?.(env.value);
                     }}
                   >
-                    {env.charAt(0).toUpperCase() + env.slice(1)}
+                    {env.label}
                   </button>
                 ))}
               </div>

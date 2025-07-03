@@ -3,7 +3,7 @@
 import React from "react";
 import PasswordInput from "./PasswordInput";
 import { FormData, Step } from "@/app/types/pcd";
-import { Tag_suggestions } from "@/app/constants/pcd";
+import { environmentOptions, Tag_suggestions } from "@/app/constants/pcd";
 
 interface Chart {
   version: string;
@@ -54,6 +54,34 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   resetForm,
   getFilenameWithoutExtension,
 }) => {
+  const currentEnvType = environmentOptions.find(
+    (env) => env.value === formData.environment
+  )?.type;
+  const isNonProd = currentEnvType !== "prod";
+  function getEnvType(envValue: string | undefined): string | undefined {
+    return environmentOptions.find((opt) => opt.value === envValue)?.type;
+  }
+  const envType = getEnvType(formData.environment);
+  let leaseOptions: { value: string; label: string }[] = [];
+
+  if (envType === "dev" || envType === "qa") {
+    leaseOptions = [1, 2, 3, 4].map((w) => ({
+      value: `${w}w`,
+      label: `${w} week${w > 1 ? "s" : ""}`,
+    }));
+  } else if (envType === "stage") {
+    leaseOptions = [
+      ...[1, 2, 3].map((w) => ({
+        value: `${w}w`,
+        label: `${w} week${w > 1 ? "s" : ""}`,
+      })),
+      ...[1, 2, 3].map((m) => ({
+        value: `${m}m`,
+        label: `${m} month${m > 1 ? "s" : ""}`,
+      })),
+    ];
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5 mt-6">
       <h2 className="text-2xl font-bold capitalize text-center text-gray-800">
@@ -295,126 +323,100 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       )}
 
       {/* Lease Duration + Lease Date */}
-      {["create", "addRegion", "updateLease"].includes(step) &&
-        formData.environment !== "production" && (
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="w-full">
-              <label
-                htmlFor="leaseSelector"
-                className="block text-gray-700 mb-1"
-              >
-                {step === "updateLease"
-                  ? "Set New Lease Duration"
-                  : "Lease Duration"}
-              </label>
-              <select
-                id="leaseSelector"
-                disabled={formData.regionName === ""}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const now = new Date();
-                  const leaseDate = new Date(now);
-
-                  if (val.endsWith("w")) {
-                    leaseDate.setDate(now.getDate() + parseInt(val) * 7);
-                  } else if (val.endsWith("m")) {
-                    leaseDate.setMonth(now.getMonth() + parseInt(val));
-                  }
-
-                  handleInputChange({
-                    target: {
-                      name: "leaseDate",
-                      value: leaseDate.toISOString().split("T")[0],
-                    },
-                  } as React.ChangeEvent<HTMLInputElement>);
-                }}
-                className={`w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                  formData.regionName === ""
-                    ? "bg-gray-100 cursor-not-allowed"
-                    : "cursor-pointer"
-                }`}
-              >
-                <option value="">Select Duration</option>
-                {(formData.environment === "dev" ||
-                  formData.environment === "qa") &&
-                  [1, 2, 3, 4].map((w) => (
-                    <option key={w} value={`${w}w`}>
-                      {w} week{w > 1 ? "s" : ""}
-                    </option>
-                  ))}
-                {formData.environment === "staging" && (
-                  <>
-                    {[1, 2, 3].map((w) => (
-                      <option key={`w${w}`} value={`${w}w`}>
-                        {w} week{w > 1 ? "s" : ""}
-                      </option>
-                    ))}
-                    {[1, 2, 3].map((m) => (
-                      <option key={`m${m}`} value={`${m}m`}>
-                        {m} month{m > 1 ? "s" : ""}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-            </div>
-
-            <div className="w-full">
-              <label htmlFor="leaseDate" className="block text-gray-700 mb-1">
-                Lease Expiry Date
-              </label>
-              <input
-                name="leaseDate"
-                id="leaseDate"
-                value={formData.leaseDate}
-                onChange={handleInputChange}
-                disabled
-                min={
-                  new Date(Date.now() + 24 * 60 * 60 * 1000)
-                    .toISOString()
-                    .split("T")[0]
-                }
-                placeholder={
-                  formData.shortName && !formData.leaseDate
-                    ? "Not set Previously"
-                    : "dd/mm/yyy"
-                }
-                required
-                className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
-              />
-            </div>
-          </div>
-        )}
-      {/* HTTP Certs */}
-      {["create", "addRegion"].includes(step) &&
-        formData.environment !== "production" && (
-          <div className="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="checkbox"
-              id="use_du_specific_le_http_cert"
-              name="use_du_specific_le_http_cert"
-              checked={formData.use_du_specific_le_http_cert === "true"}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  use_du_specific_le_http_cert: e.target.checked
-                    ? "true"
-                    : "false",
-                }))
-              }
-              disabled={step === "addRegion"}
-              className={`w-5 h-5 accent-blue-600 ${
-                step === "addRegion" ? "cursor-not-allowed" : ""
-              }`}
-            />
-            <label
-              htmlFor="use_du_specific_le_http_cert"
-              className="text-gray-700"
-            >
-              Use special HTTP Certs?
+      {["create", "addRegion", "updateLease"].includes(step) && isNonProd && (
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="w-full">
+            <label htmlFor="leaseSelector" className="block text-gray-700 mb-1">
+              {step === "updateLease"
+                ? "Set New Lease Duration"
+                : "Lease Duration"}
             </label>
+            <select
+              id="leaseSelector"
+              onChange={(e) => {
+                const val = e.target.value;
+                const now = new Date();
+                const leaseDate = new Date(now);
+
+                if (val.endsWith("w")) {
+                  leaseDate.setDate(now.getDate() + parseInt(val) * 7);
+                } else if (val.endsWith("m")) {
+                  leaseDate.setMonth(now.getMonth() + parseInt(val));
+                }
+
+                handleInputChange({
+                  target: {
+                    name: "leaseDate",
+                    value: leaseDate.toISOString().split("T")[0],
+                  },
+                } as React.ChangeEvent<HTMLInputElement>);
+              }}
+              className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+            >
+              <option value="">Select Duration</option>
+              {leaseOptions.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+
+          <div className="w-full">
+            <label htmlFor="leaseDate" className="block text-gray-700 mb-1">
+              Lease Expiry Date
+            </label>
+            <input
+              name="leaseDate"
+              id="leaseDate"
+              value={formData.leaseDate}
+              onChange={handleInputChange}
+              disabled
+              min={
+                new Date(Date.now() + 24 * 60 * 60 * 1000)
+                  .toISOString()
+                  .split("T")[0]
+              }
+              placeholder={
+                formData.shortName && !formData.leaseDate
+                  ? "Not set Previously"
+                  : "dd/mm/yyy"
+              }
+              required
+              className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+            />
+          </div>
+        </div>
+      )}
+      {/* HTTP Certs */}
+      {["create", "addRegion"].includes(step) && isNonProd && (
+        <div className="flex items-center space-x-3 cursor-pointer">
+          <input
+            type="checkbox"
+            id="use_du_specific_le_http_cert"
+            name="use_du_specific_le_http_cert"
+            checked={formData.use_du_specific_le_http_cert === "true"}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                use_du_specific_le_http_cert: e.target.checked
+                  ? "true"
+                  : "false",
+              }))
+            }
+            disabled={step === "addRegion"}
+            className={`w-5 h-5 accent-blue-600 ${
+              step === "addRegion" ? "cursor-not-allowed" : ""
+            }`}
+          />
+          <label
+            htmlFor="use_du_specific_le_http_cert"
+            className="text-gray-700"
+          >
+            Use special HTTP Certs?
+          </label>
+        </div>
+      )}
       {/* Tag input field */}
       {["create", "addRegion"].includes(step) && (
         <div>

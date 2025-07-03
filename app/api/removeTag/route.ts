@@ -1,11 +1,10 @@
-import { bork_urls, log } from "@/app/constants/pcd";
+import { environmentOptions, log } from "@/app/constants/pcd";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { environment, namespace, tag, userEmail } = body;
-
+    const { environment, fqdn, tag, userEmail } = body;
     const cleanTag = tag?.trim();
 
     // 🔍 Log userEmail and input
@@ -15,7 +14,7 @@ export async function POST(req: NextRequest) {
       log.warn("No userEmail provided in request body");
     }
 
-    if (!environment || !namespace || !cleanTag) {
+    if (!environment || !fqdn || !cleanTag) {
       log.warn(`Missing required fields. Received: ${JSON.stringify(body)}`);
       return NextResponse.json(
         { message: "Missing required fields" },
@@ -23,15 +22,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const baseURL = bork_urls[environment];
-    const regionDomain = baseURL
-      .replace("https://", "")
-      .replace("bork", namespace);
+    const selectedEnv = environmentOptions.find((e) => e.value === environment);
+
+    if (!selectedEnv?.borkUrl) {
+      log.error(`Invalid environment: ${environment}`);
+      return NextResponse.json(
+        { message: "Invalid environment" },
+        { status: 400 }
+      );
+    }
 
     // Step 1: Fetch current metadata
-    log.info(` Fetching current metadata for region: ${regionDomain}`);
+    log.info(` Fetching current metadata for region: ${fqdn}`);
     const res = await fetch(
-      `${baseURL}/api/v1/regions/${regionDomain}/metadata`
+      `${selectedEnv.borkUrl}/api/v1/regions/${fqdn}/metadata`
     );
     const text = await res.text();
 
@@ -60,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     const currentMetadata = data.details?.metadata || {};
 
-    // Step2: Demerge Tag
+    // Step 2: Demerge Tag
     const existingTags = (currentMetadata.tags || "")
       .split(",")
       .map((t: string) => t.trim())
@@ -76,14 +80,14 @@ export async function POST(req: NextRequest) {
     };
 
     log.info(
-      `Updating metadata for ${regionDomain}. Removed tag: "${cleanTag}". New tags: ${updatedTags.join(
+      `Updating metadata for ${fqdn}. Removed tag: "${cleanTag}". New tags: ${updatedTags.join(
         ","
       )}`
     );
 
     // Step 3: POST updated metadata
     const updateRes = await fetch(
-      `${baseURL}/api/v1/regions/${regionDomain}/metadata`,
+      `${selectedEnv.borkUrl}/api/v1/regions/${fqdn}/metadata`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

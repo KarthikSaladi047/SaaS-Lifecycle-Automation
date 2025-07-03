@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
-import { bork_urls, log } from "@/app/constants/pcd";
+import { environmentOptions, log } from "@/app/constants/pcd";
 
 interface CustomerItem {
   shortname: string;
@@ -20,9 +20,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const baseURL = bork_urls[env];
+    const selectedEnv = environmentOptions.find((e) => e.value === env);
 
-    const response = await axios.get(`${baseURL}/api/v1/customers/`);
+    if (!selectedEnv?.borkUrl) {
+      log.error(`Invalid environment value: ${env}`);
+      return NextResponse.json(
+        { error: "Invalid 'env' value" },
+        { status: 400 }
+      );
+    }
+
+    const response = await axios.get(
+      `${selectedEnv.borkUrl}/api/v1/customers/`
+    );
     const items = response.data.items;
 
     log.info(` Retrieved ${items.length} customers from ${env}`);

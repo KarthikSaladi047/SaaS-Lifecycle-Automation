@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import https from "https";
 import fs from "fs/promises";
-import { bork_urls, log } from "@/app/constants/pcd";
+import { environmentOptions, log } from "@/app/constants/pcd";
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -18,28 +18,36 @@ export async function DELETE(req: NextRequest) {
       log.warn("No userEmail provided in request body");
     }
 
+    const selectedEnv = environmentOptions.find(
+      (env) => env.value === environment
+    );
+
+    if (!selectedEnv?.borkUrl || !selectedEnv?.domain) {
+      log.error(`Invalid environment: ${environment}`);
+      return NextResponse.json(
+        { error: "Invalid environment" },
+        { status: 400 }
+      );
+    }
+
     const getTokenFromSecret = async (env: string) => {
       const secretPath = `/var/run/secrets/platform9/${env}-bork-token`;
       return (await fs.readFile(secretPath, "utf8")).trim();
     };
 
     const borkToken = token || (await getTokenFromSecret(environment));
-    const baseURL = bork_urls[environment];
-
     const regionPrefix = isInfra ? short : `${short}-${region}`;
-    const regionDomain = baseURL
-      .replace("https://", "")
-      .replace("bork", regionPrefix);
-    const customerUrl = `${baseURL}/api/v1/customers/${short}`;
+    const regionDomain = `${regionPrefix}${selectedEnv.domain}`;
+    const customerUrl = `${selectedEnv.borkUrl}/api/v1/customers/${short}`;
 
-    // Step 1: Send BURN request and wait (max 10s)
+    // Step 1: Send BURN request
     const burnResponse = await new Promise<{ completed: boolean }>(
       (resolve) => {
         log.info(`Sending BURN request for region: ${regionDomain}`);
 
-        const req = https.request(
+        const reqBurn = https.request(
           {
-            hostname: new URL(baseURL).hostname,
+            hostname: new URL(selectedEnv.borkUrl).hostname,
             path: `/api/v1/regions/${regionDomain}`,
             method: "BURN",
             headers: {
@@ -48,7 +56,7 @@ export async function DELETE(req: NextRequest) {
             },
           },
           (res) => {
-            res.on("data", () => {}); // Ignore body
+            res.on("data", () => {});
             res.on("end", () => {
               log.info(`BURN completed for ${regionDomain}`);
               resolve({ completed: true });
@@ -56,14 +64,13 @@ export async function DELETE(req: NextRequest) {
           }
         );
 
-        req.on("error", (err) => {
+        reqBurn.on("error", (err) => {
           log.warn(`BURN request failed silently: ${err.message}`);
           resolve({ completed: false });
         });
 
-        req.end();
+        reqBurn.end();
 
-        // Timeout if BURN hangs > 10s
         setTimeout(() => {
           log.warn(`BURN timed out after 10s for ${regionDomain}`);
           resolve({ completed: false });
@@ -71,7 +78,7 @@ export async function DELETE(req: NextRequest) {
       }
     );
 
-    // Step 2: If Infra and BURN completed, delete customer
+    // Step 2: If Infra, try to delete customer
     if (isInfra && burnResponse.completed) {
       log.info(`Deleting customer: ${short}`);
       const deleteCustomer = await fetch(customerUrl, {
@@ -82,13 +89,11 @@ export async function DELETE(req: NextRequest) {
       if (!deleteCustomer.ok) {
         const errorText = await deleteCustomer.text();
         log.warn(`Customer deletion failed: ${errorText}`);
-        // But we don’t throw — user already got confirmation
       } else {
         log.success(`Customer ${short} deleted successfully.`);
       }
     }
 
-    // ✅ Respond to frontend no matter what
     log.success(
       `Region ${regionDomain} deletion initiated.${
         isInfra ? " Customer delete scheduled." : ""

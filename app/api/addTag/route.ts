@@ -1,19 +1,18 @@
-import { bork_urls, log } from "@/app/constants/pcd";
+import { environmentOptions, log } from "@/app/constants/pcd";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { environment, namespace, tag, userEmail } = body;
+    const { environment, fqdn, tag, userEmail } = body;
 
-    // 🔍 Log userEmail for tracking
     if (userEmail) {
       log.info(`Tag update requested by: ${userEmail}`);
     } else {
       log.warn("No userEmail provided in request body");
     }
 
-    if (!environment || !namespace || !tag) {
+    if (!environment || !fqdn || !tag) {
       log.warn(`Missing required fields. Body: ${JSON.stringify(body)}`);
       return NextResponse.json(
         { message: "Missing required fields" },
@@ -21,15 +20,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const baseURL = bork_urls[environment];
-    const regionDomain = baseURL
-      .replace("https://", "")
-      .replace("bork", namespace);
+    const selectedEnv = environmentOptions.find((e) => e.value === environment);
+
+    if (!selectedEnv?.borkUrl) {
+      log.error(`Invalid environment: ${environment}`);
+      return NextResponse.json(
+        { message: "Invalid environment" },
+        { status: 400 }
+      );
+    }
 
     // Step 1: Fetch current metadata
-    log.info(` Fetching metadata for region: ${regionDomain}`);
+    log.info(` Fetching metadata for region: ${fqdn}`);
     const res = await fetch(
-      `${baseURL}/api/v1/regions/${regionDomain}/metadata`
+      `${selectedEnv.borkUrl}/api/v1/regions/${fqdn}/metadata`
     );
     const text = await res.text();
 
@@ -70,11 +74,11 @@ export async function POST(req: NextRequest) {
       tags: updatedTags.join(","),
     };
 
-    log.info(`Updating tags for ${regionDomain} to: ${updatedTags.join(",")}`);
+    log.info(`Updating tags for ${fqdn} to: ${updatedTags.join(",")}`);
 
     // Step 3: POST updated metadata
     const updateRes = await fetch(
-      `${baseURL}/api/v1/regions/${regionDomain}/metadata`,
+      `${selectedEnv.borkUrl}/api/v1/regions/${fqdn}/metadata`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,7 +95,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    log.success(`Tag "${tag}" added successfully for ${regionDomain}`);
+    log.success(`Tag "${tag}" added successfully for ${fqdn}`);
     return NextResponse.json({ message: "Tag added", tags: updatedTags });
   } catch (e) {
     log.error(`Unhandled error in tag update: ${e}`);

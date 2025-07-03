@@ -1,4 +1,4 @@
-import { bork_urls, log } from "@/app/constants/pcd";
+import { environmentOptions, log } from "@/app/constants/pcd";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -7,14 +7,12 @@ export async function POST(req: NextRequest) {
     const { environment, shortName, regionName, leaseDate, note, userEmail } =
       body;
 
-    // Track requester
     if (userEmail) {
       log.info(` Lease update requested by userEmail: ${userEmail}`);
     } else {
       log.warn("No userEmail provided in lease update request.");
     }
 
-    // Validate input
     if (!environment || !leaseDate || !shortName || !regionName) {
       log.warn("Missing required fields in request body.");
       return NextResponse.json(
@@ -23,18 +21,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const envObj = environmentOptions.find((env) => env.value === environment);
+    if (!envObj?.borkUrl || !envObj.domain) {
+      log.error(`Invalid environment: ${environment}`);
+      return NextResponse.json(
+        { message: "Invalid environment" },
+        { status: 400 }
+      );
+    }
+
     const isInfra = regionName === "Infra";
-    const baseURL = bork_urls[environment];
     const regionPrefix = isInfra ? shortName : `${shortName}-${regionName}`;
-    const regionDomain = baseURL
-      .replace("https://", "")
-      .replace("bork", regionPrefix);
+    const regionDomain = `https://${regionPrefix}${envObj.domain}`;
 
     log.info(`Fetching current metadata for region: ${regionDomain}`);
 
-    // Step 1: Fetch current metadata
     const res = await fetch(
-      `${baseURL}/api/v1/regions/${regionDomain}/metadata`
+      `${envObj.borkUrl}/api/v1/regions/${regionDomain.replace(
+        "https://",
+        ""
+      )}/metadata`
     );
     const text = await res.text();
 
@@ -60,12 +66,11 @@ export async function POST(req: NextRequest) {
     const currentMetadata = data.details?.metadata || {};
     const currentCounter = parseInt(currentMetadata.lease_counter || "0", 10);
 
-    // Step 2: Prepare updated metadata
     const updatedMetadata = {
       ...currentMetadata,
       lease_date: leaseDate,
       lease_counter: String(currentCounter + 1),
-      note: note,
+      note,
     };
 
     log.info(
@@ -74,9 +79,11 @@ export async function POST(req: NextRequest) {
       })`
     );
 
-    // Step 3: POST updated metadata
     const updateRes = await fetch(
-      `${baseURL}/api/v1/regions/${regionDomain}/metadata`,
+      `${envObj.borkUrl}/api/v1/regions/${regionDomain.replace(
+        "https://",
+        ""
+      )}/metadata`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -94,9 +101,7 @@ export async function POST(req: NextRequest) {
     }
 
     log.success(`Lease updated successfully for ${regionDomain}`);
-    return NextResponse.json({
-      message: "Lease updated successfully",
-    });
+    return NextResponse.json({ message: "Lease updated successfully" });
   } catch (e: unknown) {
     if (e instanceof Error) {
       log.error(`[FATAL] Error updating lease: ${e.message}`);

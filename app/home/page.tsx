@@ -13,9 +13,9 @@ export default function HomePage() {
 
   const [environment, SetEnvironment] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("selectedEnv") || "production";
+      return localStorage.getItem("selectedEnv") || "us-prod";
     }
-    return "production";
+    return "us-prod";
   });
 
   const [tableData, setTableData] = useState<GroupedData[]>([]);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { bork_urls } from "@/app/constants/pcd";
+import { environmentOptions } from "@/app/constants/pcd";
 import { sendBatchSlackMessage } from "@/app/utils/slack";
 import { isBefore, isSameDay, parseISO, addDays, startOfDay } from "date-fns";
 import { APIItem, ExpiringRegion } from "@/app/types/pcd";
@@ -18,8 +18,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const baseURL = bork_urls[environment];
-    const regionRes = await fetch(`${baseURL}/api/v1/regions`);
+    const selectedEnv = environmentOptions.find(
+      (env) => env.value === environment
+    );
+    if (!selectedEnv?.borkUrl) {
+      return NextResponse.json(
+        { message: "Invalid environment" },
+        { status: 400 }
+      );
+    }
+
+    const regionRes = await fetch(`${selectedEnv.borkUrl}/api/v1/regions`);
     const regionData = await regionRes.json();
     const regions: APIItem[] = regionData.items || [];
 
@@ -66,7 +75,7 @@ export async function GET(req: NextRequest) {
             environment,
             shortName: region.customer_shortname,
             regionName: region.region_name,
-            userEmail: "pcd-manager@platform9.com",
+            userEmail: "pcd-manager-automation@platform9.com",
           }),
         });
 
@@ -89,7 +98,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       deleted: expiredRegions.map((r) => r.namespace),
-      notified5Days: expiringInSevenDays.map((r) => r.ownerEmail),
+      notified7Days: expiringInSevenDays.map((r) => r.ownerEmail),
       notifiedTomorrow: expiringTomorrow.map((r) => r.ownerEmail),
     });
   } catch (e) {

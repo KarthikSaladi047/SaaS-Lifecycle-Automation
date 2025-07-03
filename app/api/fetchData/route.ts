@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { GroupedData, APIItem } from "@/app/types/pcd";
-import { bork_urls, log } from "@/app/constants/pcd";
+import { environmentOptions, log } from "@/app/constants/pcd"; // make sure environmentOptions is exported from here
 
 async function fetchAPIData(env: string): Promise<GroupedData[]> {
-  const baseURL = bork_urls[env];
+  const selectedEnv = environmentOptions.find((e) => e.value === env);
 
-  const response = await axios.get(`${baseURL}/api/v1/regions`, {
+  if (!selectedEnv?.borkUrl) {
+    throw new Error(`Invalid or unsupported environment: ${env}`);
+  }
+
+  const response = await axios.get(`${selectedEnv.borkUrl}/api/v1/regions`, {
     params: { env },
   });
 
