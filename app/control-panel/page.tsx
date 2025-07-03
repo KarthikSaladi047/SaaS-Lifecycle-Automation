@@ -72,6 +72,7 @@ export default function ManagePCDPage() {
     dbBackend: "",
     charturl: "",
     leaseDate: "",
+    cluster: "",
     use_du_specific_le_http_cert: "",
     userEmail: "",
     note: "",
@@ -91,6 +92,7 @@ export default function ManagePCDPage() {
       leaseDate: "",
       dbBackend: "",
       charturl: "",
+      cluster: "",
       use_du_specific_le_http_cert: "",
       token: "",
       tags: "",
@@ -264,7 +266,7 @@ export default function ManagePCDPage() {
     fetchAdminEmails();
   }, [formData.environment, shouldRefetch, step]);
 
-  // Fill regions details
+  // Fill region details
   useEffect(() => {
     const fillData = async () => {
       setIsLoading(true);
@@ -275,7 +277,7 @@ export default function ManagePCDPage() {
         );
         setShortNames(infraOnly.map((r) => r.namespace));
 
-        // Set region names for selected customer
+        // Find region names for selected customer
         const customerData = data.find(
           (item) => item.customer === formData.shortName
         );
@@ -309,7 +311,6 @@ export default function ManagePCDPage() {
             dbBackend: "mysql",
             use_du_specific_le_http_cert:
               matchedInfraRegion?.use_du_specific_le_http_cert ?? "false",
-            leaseDate: matchedInfraRegion?.lease_date ?? "",
           }));
         }
       } catch (err) {

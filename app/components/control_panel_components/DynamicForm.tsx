@@ -380,7 +380,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                   .split("T")[0]
               }
               placeholder={
-                formData.shortName && !formData.leaseDate
+                formData.shortName &&
+                !formData.leaseDate &&
+                step === "updateLease"
                   ? "Not set Previously"
                   : "dd/mm/yyy"
               }
