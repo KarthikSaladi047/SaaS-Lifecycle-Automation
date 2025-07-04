@@ -157,7 +157,7 @@ export default function ManagePCDPage() {
         case "create":
           endpoint = "/api/createRegion";
           actionLabel = "PCD creation";
-          responseMessage = `New PCD "${formData.shortName}" creation is Intiated!`;
+          responseMessage = `New PCD "${formData.shortName}" creation is initiated!`;
           break;
 
         case "addRegion":
@@ -169,7 +169,7 @@ export default function ManagePCDPage() {
         case "deleteRegion":
           endpoint = "/api/deleteRegion";
           actionLabel = "Region deletion";
-          responseMessage = `Region "${formData.regionName}" deleted from PCD "${formData.shortName}" Intiated!`;
+          responseMessage = `Region "${formData.regionName}" deleted from PCD "${formData.shortName}" initiated!`;
           break;
 
         case "updateLease":
@@ -181,7 +181,7 @@ export default function ManagePCDPage() {
         case "upgrade":
           endpoint = "/api/upgradeRegion";
           actionLabel = "Upgrade Region";
-          responseMessage = `Upgrade Intiated for PCD "${formData.shortName}", Region "${formData.regionName}"!`;
+          responseMessage = `Upgrade initiated for PCD "${formData.shortName}", Region "${formData.regionName}"!`;
           break;
 
         default:
@@ -196,9 +196,16 @@ export default function ManagePCDPage() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
+        let errorMessage = "Unknown error occurred";
+        try {
+          const errorJson = await response.json();
+          errorMessage = errorJson.error || JSON.stringify(errorJson);
+        } catch {
+          errorMessage = await response.text();
+        }
         setIsError(true);
-        throw new Error(`${actionLabel} failed: ${errorText}`);
+        setSubmissionSuccess(`${actionLabel} failed: ${errorMessage}`);
+        return;
       }
 
       const result = await response.json();
@@ -207,7 +214,6 @@ export default function ManagePCDPage() {
       setShouldRefetch(true);
     } catch (error) {
       console.error("Submission error:", error);
-      setSubmissionSuccess("Something went wrong. Please check the console.");
       setIsError(true);
     } finally {
       setIsLoading(false);
