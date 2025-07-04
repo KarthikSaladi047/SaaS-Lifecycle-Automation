@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pcd-manager
+  labels:
+    name: pcd-manager
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pcd-manager-env-secret
+  namespace: pcd-manager
+type: Opaque
+stringData:
+  GOOGLE_CLIENT_ID: <CLIENT_ID>
+  GOOGLE_CLIENT_SECRET: <CLIENT_SECRET>
+  NEXTAUTH_URL: https://<FQDN>
+  NEXTAUTH_SECRET: <RANDOM_LOMNG_STRING>
+  SLACK_BOT_TOKEN: <TOKEN>
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bork-token-secret
+  namespace: pcd-manager
+type: Opaque
+stringData:
+  us-qa-bork-token: <TOKEN>
+  eu-qa-bork-token: <TOKEN>
+  us-stage-bork-token: <TOKEN>
+  eu-stage-bork-token: <TOKEN>
+  us-dev-bork-token: <TOKEN>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pcd-manager
+  namespace: pcd-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pcd-manager
+  template:
+    metadata:
+      labels:
+        app: pcd-manager
+    spec:
+      containers:
+        - name: pcd-manager
+          image: <CONTAINER_IMAGE>
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: pcd-manager-env-secret
+          volumeMounts:
+            - name: bork-token
+              mountPath: /var/run/secrets/platform9
+              readOnly: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: bork-token
+          secret:
+            secretName: bork-token-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pcd-manager
+  namespace: pcd-manager
+spec:
+  selector:
+    app: pcd-manager
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pcd-manager
+  namespace: pcd-manager
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - <FQDN>
+      secretName: pcd-manager-tls
+  rules:
+    - host: <FQDN>
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: pcd-manager
+                port:
+                  number: 80
