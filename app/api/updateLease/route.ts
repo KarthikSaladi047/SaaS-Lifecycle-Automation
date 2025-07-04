@@ -32,15 +32,12 @@ export async function POST(req: NextRequest) {
 
     const isInfra = regionName === "Infra";
     const regionPrefix = isInfra ? shortName : `${shortName}-${regionName}`;
-    const regionDomain = `https://${regionPrefix}${envObj.domain}`;
+    const regionDomain = `${regionPrefix}${envObj.domain}`;
 
     log.info(`Fetching current metadata for region: ${regionDomain}`);
 
     const res = await fetch(
-      `${envObj.borkUrl}/api/v1/regions/${regionDomain.replace(
-        "https://",
-        ""
-      )}/metadata`
+      `${envObj.borkUrl}/api/v1/regions/${regionDomain}/metadata`
     );
     const text = await res.text();
 
@@ -80,10 +77,7 @@ export async function POST(req: NextRequest) {
     );
 
     const updateRes = await fetch(
-      `${envObj.borkUrl}/api/v1/regions/${regionDomain.replace(
-        "https://",
-        ""
-      )}/metadata`,
+      `${envObj.borkUrl}/api/v1/regions/${regionDomain}/metadata`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

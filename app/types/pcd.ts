@@ -29,7 +29,7 @@ export interface ClusterItem {
 }
 
 export interface DataPlane {
-  fqdn: string;
+  dataplane: string;
 }
 
 export interface FormData {

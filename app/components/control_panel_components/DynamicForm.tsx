@@ -329,14 +329,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                   className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
                 >
                   <option value="">Select Dataplane</option>
-                  {datplaneOptions.map(({ fqdn }) => (
-                    <option
-                      key={fqdn}
-                      value={fqdn
-                        .replace(/^.*?-/, "")
-                        .replace(/\.app\..*$/, "")}
-                    >
-                      {fqdn.replace(/^.*?-/, "").replace(/\.app\..*$/, "")}
+                  {datplaneOptions.map(({ dataplane }) => (
+                    <option key={dataplane} value={dataplane}>
+                      {dataplane}
                     </option>
                   ))}
                 </select>
@@ -344,9 +339,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 <input
                   name="cluster"
                   id="cluster"
-                  value={formData.cluster
-                    .replace(/^.*?-/, "")
-                    .replace(/\.app\..*$/, "")}
+                  value={formData.cluster}
                   disabled
                   placeholder="Will be same as Infra region"
                   className="w-full border px-4 py-3 rounded-xl bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"

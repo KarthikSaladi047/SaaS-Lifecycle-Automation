@@ -357,7 +357,10 @@ export default function ManagePCDPage() {
             dbBackend: defaultDbBackend,
             use_du_specific_le_http_cert:
               matchedInfraRegion?.use_du_specific_le_http_cert ?? "false",
-            cluster: matchedInfraRegion?.cluster || "",
+            cluster:
+              matchedInfraRegion?.cluster
+                .replace(/^.*?-/, "")
+                .replace(/\.app\..*$/, "") || "",
           }));
         }
       } catch (err) {

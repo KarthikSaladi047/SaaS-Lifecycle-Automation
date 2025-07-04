@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     const filteredResponse = items
       .filter((item: ClusterItem) => item.accepting)
       .map((item: ClusterItem) => ({
-        fqdn: item.fqdn,
+        dataplane: item.fqdn.replace(/^.*?-/, "").replace(/\.app\..*$/, ""),
       }));
 
     log.success(`Returning ${filteredResponse.length} filtered clusters`);
