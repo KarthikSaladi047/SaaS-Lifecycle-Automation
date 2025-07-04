@@ -31,10 +31,10 @@ export default function SuccessMessage({
     imageSrc = "/error.png";
     altText = "Error";
   } else if (isUpgrade) {
-    imageSrc = "/redirect.png";
+    imageSrc = "/upgrade.png";
     altText = "Redirecting";
   } else if (isDelete) {
-    imageSrc = "/trash.png";
+    imageSrc = "/delete.png";
     altText = "Delete Region";
   }
 
