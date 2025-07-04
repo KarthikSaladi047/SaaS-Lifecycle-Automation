@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { environmentOptions, log } from "@/app/constants/pcd";
-import { CustomerItem } from "@/app/types/pcd";
+import { ClusterItem } from "@/app/types/pcd";
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,26 +26,25 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const response = await axios.get(
-      `${selectedEnv.borkUrl}/api/v1/customers/`
-    );
+    const response = await axios.get(`${selectedEnv.borkUrl}/api/v1/clusters/`);
     const items = response.data.items;
 
-    log.info(` Retrieved ${items.length} customers from ${env}`);
+    log.info(` Retrieved ${items.length} clusters from ${env}`);
 
-    const filteredResponse = items.map((item: CustomerItem) => ({
-      shortname: item.shortname,
-      admin_email: item.admin_email,
-    }));
+    const filteredResponse = items
+      .filter((item: ClusterItem) => item.accepting)
+      .map((item: ClusterItem) => ({
+        fqdn: item.fqdn,
+      }));
 
-    log.success(`Returning ${filteredResponse.length} filtered customers`);
+    log.success(`Returning ${filteredResponse.length} filtered clusters`);
     return NextResponse.json(filteredResponse);
   } catch (error: unknown) {
     if (error instanceof Error) {
-      log.error(`Failed to fetch customers: ${error.message}`);
+      log.error(`Failed to fetch clusters: ${error.message}`);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    log.warn("Unknown error occurred while fetching customers");
+    log.warn("Unknown error occurred while fetching clusters");
     return NextResponse.json({ error: "Unknown error" }, { status: 500 });
   }
 }

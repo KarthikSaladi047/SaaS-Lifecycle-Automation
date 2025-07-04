@@ -3,13 +3,8 @@
 import React from "react";
 import { useEffect, useRef } from "react";
 import PasswordInput from "./PasswordInput";
-import { FormData, Step } from "@/app/types/pcd";
+import { Chart, FormData, Step } from "@/app/types/pcd";
 import { environmentOptions, Tag_suggestions } from "@/app/constants/pcd";
-
-interface Chart {
-  version: string;
-  location: string;
-}
 
 interface DynamicFormProps {
   step: Step;

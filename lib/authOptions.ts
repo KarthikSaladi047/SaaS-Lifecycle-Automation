@@ -1,15 +1,7 @@
 import GoogleProvider from "next-auth/providers/google";
 import type { NextAuthOptions } from "next-auth";
 import jwt from "jsonwebtoken";
-
-interface GoogleIdToken {
-  email?: string;
-  email_verified?: boolean;
-  hd?: string;
-  name?: string;
-  picture?: string;
-  sub?: string;
-}
+import { GoogleIdToken } from "@/app/types/pcd";
 
 export const authOptions: NextAuthOptions = {
   providers: [

@@ -20,7 +20,9 @@ export default function SuccessMessage({
   const isUpgrade = step === "upgrade";
 
   const envMeta = environmentOptions.find((env) => env.value === environment);
-  const slackUrl = envMeta?.slackChannel ?? "";
+  const slackUrl = isUpgrade
+    ? envMeta?.upgradeSlackChannel
+    : envMeta?.customerSlackChannel;
 
   let imageSrc = "/tickmark.png";
   let altText = "Success";
@@ -37,13 +39,7 @@ export default function SuccessMessage({
   }
 
   return (
-    <div
-      className={`p-6 ${
-        isError
-          ? "bg-red-100 border-red-400 text-red-700"
-          : "bg-green-100 border-green-400 text-green-700"
-      } border rounded flex flex-col items-center space-y-4 mt-6`}
-    >
+    <div className="p-6 rounded flex flex-col items-center space-y-4 mt-6">
       <Image
         src={imageSrc}
         alt={altText}
@@ -61,7 +57,7 @@ export default function SuccessMessage({
         </p>
       )}
 
-      {step !== "upgrade" && step !== "updateLease" && !isError && slackUrl && (
+      {step !== "updateLease" && !isError && slackUrl && (
         <a
           href={slackUrl}
           target="_blank"
@@ -72,14 +68,12 @@ export default function SuccessMessage({
         </a>
       )}
 
-      {step !== "upgrade" && (
-        <button
-          onClick={resetForm}
-          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Back to Form
-        </button>
-      )}
+      <button
+        onClick={resetForm}
+        className="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      >
+        Back to Form
+      </button>
     </div>
   );
 }

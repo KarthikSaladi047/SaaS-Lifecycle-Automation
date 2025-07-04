@@ -18,6 +18,16 @@ export interface APIItem {
   };
 }
 
+export interface CustomerItem {
+  shortname: string;
+  admin_email: string;
+}
+
+export interface ClusterItem {
+  fqdn: string;
+  accepting: boolean;
+}
+
 export interface FormData {
   environment: string;
   shortName: string;
@@ -105,6 +115,20 @@ export type DeployRegionPayload = {
     chart_url: string;
   };
 };
+
+export interface Chart {
+  version: string;
+  location: string;
+}
+
+export interface GoogleIdToken {
+  email?: string;
+  email_verified?: boolean;
+  hd?: string;
+  name?: string;
+  picture?: string;
+  sub?: string;
+}
 
 // for cleanup
 export interface BorkRegion {
