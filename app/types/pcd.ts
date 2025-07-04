@@ -28,6 +28,10 @@ export interface ClusterItem {
   accepting: boolean;
 }
 
+export interface DataPlane {
+  fqdn: string;
+}
+
 export interface FormData {
   environment: string;
   shortName: string;

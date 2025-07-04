@@ -14,6 +14,7 @@ import {
   AdminEmail,
   FormData,
   Region,
+  DataPlane,
 } from "../types/pcd";
 
 import { dbBackendOptions, tempusUrl } from "../constants/pcd";
@@ -64,6 +65,7 @@ export default function ManagePCDPage() {
   const prevEnvRef = useRef<string | null>(null);
   const [shouldRefetch, setShouldRefetch] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [datplaneOptions, setDatplaneOptions] = useState<DataPlane[]>([]);
   const [formData, setFormData] = useState<FormData>({
     environment: "",
     shortName: "",
@@ -219,7 +221,7 @@ export default function ManagePCDPage() {
     }
   }, [router, status]);
 
-  // fetch complete Data
+  // fetch Regions Data
   useEffect(() => {
     if (formData.environment !== prevEnvRef.current) {
       resetForm();
@@ -243,6 +245,35 @@ export default function ManagePCDPage() {
       };
 
       fetchGroupedData();
+    }
+  }, [step, formData.environment, shouldRefetch]);
+
+  // featch Clusters Data
+  useEffect(() => {
+    if (formData.environment !== prevEnvRef.current) {
+      resetForm();
+      prevEnvRef.current = formData.environment;
+    }
+
+    if (formData.environment) {
+      const fetchClusterData = async () => {
+        setIsLoading(true);
+        try {
+          const res = await fetch(
+            `/api/fetchClusters?env=${formData.environment}`
+          );
+          if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
+          const json: DataPlane[] = await res.json();
+          setDatplaneOptions(json);
+        } catch (err) {
+          console.error("Error fetching grouped data", err);
+        } finally {
+          setIsLoading(false);
+          if (shouldRefetch) setShouldRefetch(false);
+        }
+      };
+
+      fetchClusterData();
     }
   }, [step, formData.environment, shouldRefetch]);
 
@@ -326,6 +357,7 @@ export default function ManagePCDPage() {
             dbBackend: defaultDbBackend,
             use_du_specific_le_http_cert:
               matchedInfraRegion?.use_du_specific_le_http_cert ?? "false",
+            cluster: matchedInfraRegion?.cluster || "",
           }));
         }
       } catch (err) {
@@ -494,6 +526,7 @@ export default function ManagePCDPage() {
                   setShowCustomInput={setShowCustomInput}
                   showCustomInput={showCustomInput}
                   getFilenameWithoutExtension={getFilenameWithoutExtension}
+                  datplaneOptions={datplaneOptions}
                 />
               ))
             )}

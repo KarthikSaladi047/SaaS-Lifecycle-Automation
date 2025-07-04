@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
       adminEmail,
       adminPassword,
       dbBackend,
+      cluster,
       charturl,
       leaseDate,
       userEmail,
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
       reqDeploy.write(
         JSON.stringify({
           admin_password: adminPassword,
-          aim: AIM,
+          aim: cluster ?? AIM,
           dbbackend: dbBackend,
           regionname: isInfra ? "Infra" : normalizedRegionName,
           options: {

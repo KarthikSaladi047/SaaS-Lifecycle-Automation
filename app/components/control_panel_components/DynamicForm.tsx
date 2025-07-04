@@ -3,7 +3,7 @@
 import React from "react";
 import { useEffect, useRef } from "react";
 import PasswordInput from "./PasswordInput";
-import { Chart, FormData, Step } from "@/app/types/pcd";
+import { Chart, DataPlane, FormData, Step } from "@/app/types/pcd";
 import { environmentOptions, Tag_suggestions } from "@/app/constants/pcd";
 
 interface DynamicFormProps {
@@ -30,6 +30,7 @@ interface DynamicFormProps {
   getFilenameWithoutExtension: (url: string) => string;
   showCustomInput: boolean;
   setShowCustomInput: (val: boolean) => void;
+  datplaneOptions: DataPlane[];
 }
 
 const DynamicForm: React.FC<DynamicFormProps> = ({
@@ -53,6 +54,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   getFilenameWithoutExtension,
   setShowCustomInput,
   showCustomInput,
+  datplaneOptions,
 }) => {
   const tokenInputRef = useRef<HTMLInputElement | null>(null);
   const deleteInputRef = useRef<HTMLInputElement | null>(null);
@@ -157,28 +159,37 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         </div>
 
         <div className="w-full">
-          {step !== "create" && (
-            <label className="block text-gray-700 mb-1" htmlFor="regionName">
-              Region Name
-            </label>
-          )}
-          {step === "addRegion" ? (
-            <input
-              type="text"
-              name="regionName"
-              id="regionName"
-              placeholder="Enter Region Name"
-              value={formData.regionName}
-              onChange={(e) => {
-                if (/\s/.test(e.target.value)) return;
-                handleInputChange(e);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === " ") e.preventDefault();
-              }}
-              required
-              className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
+          <label className="block text-gray-700 mb-1" htmlFor="regionName">
+            Region Name
+          </label>
+          {["addRegion", "create"].includes(step) ? (
+            step === "addRegion" ? (
+              <input
+                type="text"
+                name="regionName"
+                id="regionName"
+                placeholder="Enter Region Name"
+                value={formData.regionName}
+                onChange={(e) => {
+                  if (/\s/.test(e.target.value)) return;
+                  handleInputChange(e);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === " ") e.preventDefault();
+                }}
+                required
+                className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            ) : (
+              <input
+                type="text"
+                name="regionName"
+                id="regionName"
+                value="Infra"
+                disabled
+                className="w-full border px-4 py-3 rounded-xl bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
+              />
+            )
           ) : ["deleteRegion", "updateLease", "upgrade"].includes(step) ? (
             <select
               name="regionName"
@@ -187,10 +198,10 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               onChange={handleInputChange}
               required
               disabled={formData.shortName === ""}
-              className={`w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+              className={`w-full border px-4 py-3 rounded-xl transition-all ${
                 formData.shortName === ""
-                  ? "bg-gray-100 cursor-not-allowed"
-                  : ""
+                  ? "bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
+                  : "focus:outline-none focus:ring-2 focus:ring-blue-400"
               }`}
             >
               <option value="">Select Region</option>
@@ -251,7 +262,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               required
               className={`w-full border px-4 py-3 rounded-xl ${
                 step !== "create"
-                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                  ? "bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
                   : "focus:outline-none focus:ring-2 focus:ring-blue-400"
               }`}
             />
@@ -266,11 +277,11 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         </div>
       )}
 
-      {/* DB Backend + Chart URL */}
+      {/* DB Backend + Dataplane + Chart URL */}
       {["create", "addRegion", "upgrade"].includes(step) && (
         <div className="flex flex-col md:flex-row gap-4">
           {step !== "upgrade" && (
-            <div className="w-full">
+            <div className="w-full md:w-1/3">
               <label htmlFor="dbBackend" className="block text-gray-700 mb-1">
                 DB Backend
               </label>
@@ -297,13 +308,54 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                   value={formData.dbBackend}
                   disabled
                   placeholder="Will be same as Infra region"
-                  className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+                  className="w-full border px-4 py-3 rounded-xl bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
                 />
               )}
             </div>
           )}
 
-          <div className="w-full">
+          {/* Dataplane */}
+          {step !== "upgrade" && (
+            <div className="w-full md:w-1/3">
+              <label htmlFor="cluster" className="block text-gray-700 mb-1">
+                Dataplane
+              </label>
+              {step === "create" ? (
+                <select
+                  id="cluster"
+                  name="cluster"
+                  value={formData.cluster}
+                  onChange={handleInputChange}
+                  className="w-full border px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+                >
+                  <option value="">Select Dataplane</option>
+                  {datplaneOptions.map(({ fqdn }) => (
+                    <option
+                      key={fqdn}
+                      value={fqdn
+                        .replace(/^.*?-/, "")
+                        .replace(/\.app\..*$/, "")}
+                    >
+                      {fqdn.replace(/^.*?-/, "").replace(/\.app\..*$/, "")}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  name="cluster"
+                  id="cluster"
+                  value={formData.cluster
+                    .replace(/^.*?-/, "")
+                    .replace(/\.app\..*$/, "")}
+                  disabled
+                  placeholder="Will be same as Infra region"
+                  className="w-full border px-4 py-3 rounded-xl bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
+                />
+              )}
+            </div>
+          )}
+          {/* Chart Version */}
+          <div className="w-full md:w-1/3">
             <label htmlFor="charturl" className="block text-gray-700 mb-1">
               Chart Version
             </label>
@@ -336,8 +388,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                         {version}
                       </option>
                     ))}
-                    {step === "create" && (
-                      <option value="custom">Custom URL</option>
+                    {(step === "create" || step === "upgrade") && (
+                      <option value="custom">Custom Chart</option>
                     )}
                   </select>
                 )}
@@ -375,7 +427,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                   disabled
                   value={getFilenameWithoutExtension(formData.charturl)}
                   placeholder="Will be same as Infra region"
-                  className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+                  className="w-full border px-4 py-3 rounded-xl bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
                 />
               </>
             )}
@@ -385,8 +437,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
 
       {/* Lease Duration + Lease Date */}
       {["create", "addRegion", "updateLease"].includes(step) && isNonProd && (
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="w-full">
+        <div className="flex flex-col md:flex-row gap-4 w-full">
+          {/* Lease Duration */}
+          <div className="w-full md:w-1/2">
             <label htmlFor="leaseSelector" className="block text-gray-700 mb-1">
               {step === "updateLease"
                 ? "Set New Lease Duration"
@@ -397,6 +450,14 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               value={formData.leaseDuration}
               onChange={(e) => {
                 const val = e.target.value;
+                if (!val) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    leaseDuration: "",
+                    leaseDate: "",
+                  }));
+                  return;
+                }
                 const now = new Date();
                 const leaseDate = new Date(now);
 
@@ -423,7 +484,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
             </select>
           </div>
 
-          <div className="w-full">
+          {/* Lease Expiry Date */}
+          <div className="w-full md:w-1/2">
             <label htmlFor="leaseDate" className="block text-gray-700 mb-1">
               Lease Expiry Date
             </label>
@@ -438,49 +500,46 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                   .toISOString()
                   .split("T")[0]
               }
-              placeholder={
-                formData.shortName &&
-                !formData.leaseDate &&
-                step === "updateLease"
-                  ? "Not set Previously"
-                  : "dd/mm/yyy"
-              }
+              placeholder="dd/mm/yyyy"
               required
-              className="w-full border px-4 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+              className="w-full border px-4 py-3 rounded-xl bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
             />
           </div>
         </div>
       )}
 
       {/* HTTP Certs */}
-      {["create", "addRegion", "upgrade"].includes(step) && isNonProd && (
-        <div className="flex items-center space-x-3 cursor-pointer">
-          <input
-            type="checkbox"
-            id="use_du_specific_le_http_cert"
-            name="use_du_specific_le_http_cert"
-            checked={formData.use_du_specific_le_http_cert === "true"}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                use_du_specific_le_http_cert: e.target.checked
-                  ? "true"
-                  : "false",
-              }))
-            }
-            disabled={step === "addRegion"}
-            className={`w-5 h-5 accent-blue-600 ${
-              step === "addRegion" ? "cursor-not-allowed" : ""
-            }`}
-          />
-          <label
-            htmlFor="use_du_specific_le_http_cert"
-            className="text-gray-700"
-          >
-            Use special HTTP Certs?
-          </label>
+      {["create", "upgrade"].includes(step) && isNonProd && (
+        <div className="flex flex-col md:flex-row gap-4 w-full">
+          <div className="w-full flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="use_du_specific_le_http_cert"
+              name="use_du_specific_le_http_cert"
+              checked={formData.use_du_specific_le_http_cert === "true"}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  use_du_specific_le_http_cert: e.target.checked
+                    ? "true"
+                    : "false",
+                }))
+              }
+              disabled={step === "addRegion"}
+              className={`w-5 h-5 accent-blue-600 ${
+                step === "addRegion" ? "cursor-not-allowed" : ""
+              }`}
+            />
+            <label
+              htmlFor="use_du_specific_le_http_cert"
+              className="text-gray-700"
+            >
+              Use special HTTP Certs?
+            </label>
+          </div>
         </div>
       )}
+
       {/* Tag input field */}
       {["create", "addRegion"].includes(step) && (
         <div>
@@ -704,7 +763,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           Reset Form
         </span>
       </div>
-      {/* Note */}
+
+      {/* Upgrade Note */}
       {step === "upgrade" && (
         <div className="mt-4 text-gray-700">
           Note: If you like to schedule this upgrade for later, you can do so
