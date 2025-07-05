@@ -134,19 +134,24 @@ export interface GoogleIdToken {
   sub?: string;
 }
 
+export type PrometheusResultEntry = {
+  metric: {
+    [key: string]: string;
+  };
+  value: [number, string];
+};
+
 export type HostStatus = {
   host_id: string;
   host_name: string;
   value: string;
 };
 
-export type PrometheusResultEntry = {
-  metric: {
-    host_id?: string;
-    host_name?: string;
-    [key: string]: string | undefined;
-  };
-  value: [number, string]; // [timestamp, value]
+export type PodStatus = {
+  pod: string;
+  namespace: string;
+  phase: string;
+  value: string;
 };
 
 // for cleanup
