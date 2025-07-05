@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { GroupedData } from "../../types/pcd";
 import { environmentOptions, tagColors } from "@/app/constants/pcd";
 
@@ -12,7 +12,7 @@ type TableProps = {
 const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
   const [confirmFQND, setConfirmFQDN] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [tagInputs, setTagInputs] = useState<Record<string, string>>({});
   const [localData, setLocalData] = useState<GroupedData[]>(data);
   const currentEnvType = environmentOptions.find(
@@ -186,6 +186,34 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
   };
 
   // Search & Sorting
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const currentEnv = localStorage.getItem("selectedEnv");
+    const lastEnv = localStorage.getItem("lastEnvUsedForSearch");
+
+    if (currentEnv && currentEnv !== lastEnv) {
+      // Env has changed → clear search
+      localStorage.removeItem("searchParameter");
+      setSearchQuery("");
+    } else {
+      // Same env → restore saved search
+      const savedSearch = localStorage.getItem("searchParameter");
+      if (savedSearch) setSearchQuery(savedSearch);
+    }
+
+    // Save this env for future comparison
+    if (currentEnv) {
+      localStorage.setItem("lastEnvUsedForSearch", currentEnv);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("searchParameter", searchQuery);
+    }
+  }, [searchQuery]);
+
   const filteredData = localData
     .map((customerGroup) => ({
       ...customerGroup,

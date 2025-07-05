@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
       body;
 
     if (userEmail) {
-      log.info(` Lease update requested by userEmail: ${userEmail}`);
+      log.info(`Lease update requested by userEmail: ${userEmail}`);
     } else {
       log.warn("No userEmail provided in lease update request.");
     }
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     if (!environment || !leaseDate || !shortName || !regionName) {
       log.warn("Missing required fields in request body.");
       return NextResponse.json(
-        { message: "Missing required fields" },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     if (!envObj?.borkUrl || !envObj.domain) {
       log.error(`Invalid environment: ${environment}`);
       return NextResponse.json(
-        { message: "Invalid environment" },
+        { error: "Invalid environment" },
         { status: 400 }
       );
     }
@@ -39,13 +39,14 @@ export async function POST(req: NextRequest) {
     const res = await fetch(
       `${envObj.borkUrl}/api/v1/regions/${regionDomain}/metadata`
     );
+
     const text = await res.text();
 
     if (!res.ok) {
       log.warn(`Failed to fetch metadata: ${text}`);
       return NextResponse.json(
-        { message: "Failed to fetch metadata" },
-        { status: 500 }
+        { error: `Failed to fetch metadata: ${text}` },
+        { status: res.status }
       );
     }
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     } catch {
       log.warn("Failed to parse metadata response.");
       return NextResponse.json(
-        { message: "Failed to parse metadata response" },
+        { error: "Failed to parse metadata response" },
         { status: 500 }
       );
     }
@@ -85,23 +86,24 @@ export async function POST(req: NextRequest) {
       }
     );
 
+    const updateErrText = await updateRes.text();
+
     if (!updateRes.ok) {
-      const errText = await updateRes.text();
-      log.error(`Failed to update metadata: ${errText}`);
+      log.error(`Failed to update metadata: ${updateErrText}`);
       return NextResponse.json(
-        { message: "Failed to update metadata" },
-        { status: 500 }
+        { error: `Failed to update metadata: ${updateErrText}` },
+        { status: updateRes.status }
       );
     }
 
     log.success(`Lease updated successfully for ${regionDomain}`);
     return NextResponse.json({ message: "Lease updated successfully" });
   } catch (e: unknown) {
-    if (e instanceof Error) {
-      log.error(`[FATAL] Error updating lease: ${e.message}`);
-    } else {
-      log.error(`[FATAL] Unknown error updating lease: ${e}`);
-    }
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    log.error(`[FATAL] Error updating lease: ${msg}`);
+    return NextResponse.json(
+      { error: `Server error: ${msg}` },
+      { status: 500 }
+    );
   }
 }

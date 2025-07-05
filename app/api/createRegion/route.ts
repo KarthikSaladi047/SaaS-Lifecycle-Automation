@@ -28,14 +28,13 @@ export async function POST(req: NextRequest) {
     const normalizedRegionName = regionName?.trim().toLowerCase();
     const normalizedAdminEmail = adminEmail.trim().toLowerCase();
 
-    // Log userEmail
     if (userEmail) {
       log.info(`Region deploy requested by userEmail: ${userEmail}`);
     } else {
       log.warn("No userEmail provided in request body");
     }
 
-    // Validate env
+    // Validate environment
     const selectedEnv = environmentOptions.find((e) => e.value === environment);
     if (!selectedEnv?.borkUrl || !selectedEnv?.domain) {
       log.error(`Invalid environment: ${environment}`);
@@ -74,7 +73,10 @@ export async function POST(req: NextRequest) {
       if (!res.ok) {
         const errText = await res.text();
         log.error(`Customer creation failed: ${errText}`);
-        throw new Error("Customer creation failed");
+        return NextResponse.json(
+          { error: `Customer creation failed: ${errText}` },
+          { status: res.status }
+        );
       }
     }
 
@@ -91,7 +93,10 @@ export async function POST(req: NextRequest) {
     if (!regionRes.ok) {
       const errText = await regionRes.text();
       log.error(`Region creation failed: ${errText}`);
-      throw new Error("Region creation failed");
+      return NextResponse.json(
+        { error: `Region creation failed: ${errText}` },
+        { status: regionRes.status }
+      );
     }
 
     // Step 3: DEPLOY Region
@@ -148,7 +153,12 @@ export async function POST(req: NextRequest) {
       log.error(
         `Deployment failed (${deployResponse.statusCode}): ${deployResponse.body}`
       );
-      throw new Error("Region deployment failed");
+      return NextResponse.json(
+        {
+          error: `Deployment failed (${deployResponse.statusCode}): ${deployResponse.body}`,
+        },
+        { status: deployResponse.statusCode }
+      );
     }
 
     // Step 4: Add Metadata
@@ -172,7 +182,10 @@ export async function POST(req: NextRequest) {
     if (!metadataRes.ok) {
       const errText = await metadataRes.text();
       log.error(`Metadata addition failed: ${errText}`);
-      throw new Error("Metadata addition failed");
+      return NextResponse.json(
+        { error: `Metadata addition failed: ${errText}` },
+        { status: metadataRes.status }
+      );
     }
 
     log.success(

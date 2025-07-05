@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
     if (!environment) {
       return NextResponse.json(
-        { message: "Missing environment" },
+        { error: "Missing environment query param" },
         { status: 400 }
       );
     }
@@ -21,14 +21,23 @@ export async function GET(req: NextRequest) {
     const selectedEnv = environmentOptions.find(
       (env) => env.value === environment
     );
+
     if (!selectedEnv?.borkUrl) {
       return NextResponse.json(
-        { message: "Invalid environment" },
+        { error: `Invalid environment: ${environment}` },
         { status: 400 }
       );
     }
 
     const regionRes = await fetch(`${selectedEnv.borkUrl}/api/v1/regions`);
+    if (!regionRes.ok) {
+      const errText = await regionRes.text();
+      return NextResponse.json(
+        { error: `Failed to fetch regions: ${errText}` },
+        { status: regionRes.status }
+      );
+    }
+
     const regionData = await regionRes.json();
     const regions: APIItem[] = regionData.items || [];
 
@@ -65,7 +74,9 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // DELETE expired regions
+    const deleted: string[] = [];
+    const failedDeletions: { region: string; reason: string }[] = [];
+
     for (const region of expiredRegions) {
       try {
         const res = await fetch(`${process.env.APP_URL}/api/deleteRegion`, {
@@ -80,10 +91,16 @@ export async function GET(req: NextRequest) {
         });
 
         if (!res.ok) {
-          console.error(`❌ Failed to delete region: ${region.namespace}`);
+          const err = await res.text();
+          failedDeletions.push({ region: region.namespace, reason: err });
+        } else {
+          deleted.push(region.namespace);
         }
-      } catch (err) {
-        console.error(`🔥 Error deleting region ${region.namespace}:`, err);
+      } catch (err: unknown) {
+        failedDeletions.push({
+          region: region.namespace,
+          reason: err instanceof Error ? err.message : "Unknown deletion error",
+        });
       }
     }
 
@@ -97,15 +114,14 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      deleted: expiredRegions.map((r) => r.namespace),
+      deleted,
+      failedDeletions,
       notified7Days: expiringInSevenDays.map((r) => r.ownerEmail),
       notifiedTomorrow: expiringTomorrow.map((r) => r.ownerEmail),
     });
-  } catch (e) {
-    console.error("❌ Cleanup API error:", e);
-    return NextResponse.json(
-      { message: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    console.error("❌ Cleanup API error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

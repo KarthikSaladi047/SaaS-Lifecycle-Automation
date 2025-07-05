@@ -10,9 +10,9 @@ export async function GET(req: NextRequest) {
     log.info(`Reset state request received. env=${environment}, fqdn=${fqdn}`);
 
     if (!environment || !fqdn) {
-      log.warn("[WARN] Missing required query parameters.");
+      log.warn("Missing required query parameters.");
       return NextResponse.json(
-        { message: "Missing environment or fqdn" },
+        { error: "Missing 'environment' or 'fqdn'" },
         { status: 400 }
       );
     }
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     if (!selectedEnv?.borkUrl) {
       log.error(`Invalid environment: ${environment}`);
       return NextResponse.json(
-        { message: "Invalid environment" },
+        { error: "Invalid environment" },
         { status: 400 }
       );
     }
@@ -39,14 +39,14 @@ export async function GET(req: NextRequest) {
       body: JSON.stringify({ state: "ready" }),
     });
 
-    const text = await res.text();
+    const responseText = await res.text();
 
     if (!res.ok) {
       log.error(
-        `Failed to reset region state. Status: ${res.status}, Body: ${text}`
+        `Failed to reset region state. Status: ${res.status}, Body: ${responseText}`
       );
       return NextResponse.json(
-        { message: `Failed to set region state: ${text}` },
+        { error: `Failed to set region state: ${responseText}` },
         { status: res.status }
       );
     }
@@ -54,12 +54,10 @@ export async function GET(req: NextRequest) {
     log.success(`${fqdn} state reset to 'ready'`);
     return NextResponse.json({ message: "Region state reset to 'ready'" });
   } catch (e: unknown) {
-    if (e instanceof Error) {
-      log.error(`Error resetting task status: ${e.message}`);
-    } else {
-      log.error(`Unknown error resetting task status: ${e}`);
-    }
+    const errorMessage =
+      e instanceof Error ? e.message : "Unexpected error occurred";
+    log.error(`Error resetting region state: ${errorMessage}`);
 
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

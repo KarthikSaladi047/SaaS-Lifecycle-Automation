@@ -7,9 +7,8 @@ export async function POST(req: NextRequest) {
     const { environment, fqdn, tag, userEmail } = body;
     const cleanTag = tag?.trim();
 
-    // 🔍 Log userEmail and input
     if (userEmail) {
-      log.info(` Tag removal requested by: ${userEmail}`);
+      log.info(`Tag removal requested by: ${userEmail}`);
     } else {
       log.warn("No userEmail provided in request body");
     }
@@ -17,7 +16,7 @@ export async function POST(req: NextRequest) {
     if (!environment || !fqdn || !cleanTag) {
       log.warn(`Missing required fields. Received: ${JSON.stringify(body)}`);
       return NextResponse.json(
-        { message: "Missing required fields" },
+        { error: "Missing required fields: environment, fqdn, tag" },
         { status: 400 }
       );
     }
@@ -27,13 +26,13 @@ export async function POST(req: NextRequest) {
     if (!selectedEnv?.borkUrl) {
       log.error(`Invalid environment: ${environment}`);
       return NextResponse.json(
-        { message: "Invalid environment" },
+        { error: "Invalid environment" },
         { status: 400 }
       );
     }
 
     // Step 1: Fetch current metadata
-    log.info(` Fetching current metadata for region: ${fqdn}`);
+    log.info(`Fetching current metadata for region: ${fqdn}`);
     const res = await fetch(
       `${selectedEnv.borkUrl}/api/v1/regions/${fqdn}/metadata`
     );
@@ -42,8 +41,8 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       log.error(`Failed to fetch metadata. Response: ${text}`);
       return NextResponse.json(
-        { message: "Failed to fetch metadata" },
-        { status: 500 }
+        { error: `Failed to fetch metadata: ${text}` },
+        { status: res.status }
       );
     }
 
@@ -51,20 +50,16 @@ export async function POST(req: NextRequest) {
     try {
       data = JSON.parse(text);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        log.error(`JSON parse error: ${err.message}`);
-      } else {
-        log.warn(`Unknown error while parsing JSON: ${err}`);
-      }
+      const msg =
+        err instanceof Error ? err.message : "Unknown JSON parsing error";
+      log.error(`JSON parse error: ${msg}`);
       return NextResponse.json(
-        { message: "Failed to parse metadata response" },
+        { error: "Failed to parse metadata response" },
         { status: 500 }
       );
     }
 
     const currentMetadata = data.details?.metadata || {};
-
-    // Step 2: Demerge Tag
     const existingTags = (currentMetadata.tags || "")
       .split(",")
       .map((t: string) => t.trim())
@@ -80,7 +75,7 @@ export async function POST(req: NextRequest) {
     };
 
     log.info(
-      `Updating metadata for ${fqdn}. Removed tag: "${cleanTag}". New tags: ${updatedTags.join(
+      `Updating metadata for ${fqdn}. Removed tag: "${cleanTag}". Remaining: ${updatedTags.join(
         ","
       )}`
     );
@@ -95,23 +90,24 @@ export async function POST(req: NextRequest) {
       }
     );
 
+    const updateText = await updateRes.text();
+
     if (!updateRes.ok) {
-      const errorText = await updateRes.text();
-      log.error(`Failed to update metadata: ${errorText}`);
+      log.error(`Failed to update metadata: ${updateText}`);
       return NextResponse.json(
-        { message: "Failed to update metadata" },
-        { status: 500 }
+        { error: `Failed to update metadata: ${updateText}` },
+        { status: updateRes.status }
       );
     }
 
-    log.success(` Tag "${cleanTag}" removed successfully.`);
+    log.success(`Tag "${cleanTag}" removed successfully.`);
     return NextResponse.json({ message: "Tag removed", tags: updatedTags });
   } catch (err: unknown) {
-    if (err instanceof Error) {
-      log.error(`Unhandled error during tag removal: ${err.message}`);
-    } else {
-      log.error(`Unknown unhandled error: ${err}`);
-    }
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    const msg = err instanceof Error ? err.message : "Unexpected error";
+    log.error(`Unhandled error during tag removal: ${msg}`);
+    return NextResponse.json(
+      { error: `Server error: ${msg}` },
+      { status: 500 }
+    );
   }
 }

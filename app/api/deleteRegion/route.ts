@@ -23,86 +23,96 @@ export async function DELETE(req: NextRequest) {
     );
 
     if (!selectedEnv?.borkUrl || !selectedEnv?.domain) {
-      log.error(`Invalid environment: ${environment}`);
-      return NextResponse.json(
-        { error: "Invalid environment" },
-        { status: 400 }
-      );
+      const msg = `Invalid environment: ${environment}`;
+      log.error(msg);
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const getTokenFromSecret = async (env: string) => {
-      const secretPath = `/var/run/secrets/platform9/${env}-bork-token`;
-      return (await fs.readFile(secretPath, "utf8")).trim();
-    };
+    const borkToken =
+      token ||
+      (
+        await fs.readFile(
+          `/var/run/secrets/platform9/${environment}-bork-token`,
+          "utf8"
+        )
+      ).trim();
 
-    const borkToken = token || (await getTokenFromSecret(environment));
     const regionPrefix = isInfra ? short : `${short}-${region}`;
     const regionDomain = `${regionPrefix}${selectedEnv.domain}`;
     const customerUrl = `${selectedEnv.borkUrl}/api/v1/customers/${short}`;
 
     // Step 1: Send BURN request
-    const burnResponse = await new Promise<{ completed: boolean }>(
-      (resolve) => {
-        log.info(`Sending BURN request for region: ${regionDomain}`);
+    const burnResponse = await new Promise<{
+      statusCode: number;
+      body: string;
+    }>((resolve) => {
+      log.info(`Sending BURN request for region: ${regionDomain}`);
 
-        const reqBurn = https.request(
-          {
-            hostname: new URL(selectedEnv.borkUrl).hostname,
-            path: `/api/v1/regions/${regionDomain}`,
-            method: "BURN",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${borkToken}`,
-            },
+      const reqBurn = https.request(
+        {
+          hostname: new URL(selectedEnv.borkUrl).hostname,
+          path: `/api/v1/regions/${regionDomain}`,
+          method: "BURN",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${borkToken}`,
           },
-          (res) => {
-            res.on("data", () => {});
-            res.on("end", () => {
-              log.info(`BURN completed for ${regionDomain}`);
-              resolve({ completed: true });
-            });
-          }
-        );
+        },
+        (res) => {
+          let data = "";
+          res.on("data", (chunk) => (data += chunk));
+          res.on("end", () => {
+            resolve({ statusCode: res.statusCode || 500, body: data });
+          });
+        }
+      );
 
-        reqBurn.on("error", (err) => {
-          log.warn(`BURN request failed silently: ${err.message}`);
-          resolve({ completed: false });
-        });
+      reqBurn.on("error", (err) => {
+        log.error(`BURN request error: ${err.message}`);
+        resolve({ statusCode: 500, body: err.message });
+      });
 
-        reqBurn.end();
+      reqBurn.end();
 
-        setTimeout(() => {
-          log.warn(`BURN timed out after 10s for ${regionDomain}`);
-          resolve({ completed: false });
-        }, 10_000);
-      }
-    );
+      // Timeout after 10s
+      setTimeout(() => {
+        log.warn(`BURN timed out after 10s for ${regionDomain}`);
+        resolve({ statusCode: 408, body: "BURN timeout" });
+      }, 10_000);
+    });
 
-    // Step 2: If Infra, try to delete customer
-    if (isInfra && burnResponse.completed) {
+    if (burnResponse.statusCode >= 400) {
+      const msg = `BURN failed (${burnResponse.statusCode}): ${burnResponse.body}`;
+      log.error(msg);
+      return NextResponse.json(
+        { error: msg },
+        { status: burnResponse.statusCode }
+      );
+    }
+
+    log.success(`BURN request succeeded for ${regionDomain}`);
+
+    // Step 2: If Infra, delete customer
+    if (isInfra) {
       log.info(`Deleting customer: ${short}`);
-      const deleteCustomer = await fetch(customerUrl, {
+      const deleteRes = await fetch(customerUrl, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
 
-      if (!deleteCustomer.ok) {
-        const errorText = await deleteCustomer.text();
-        log.warn(`Customer deletion failed: ${errorText}`);
+      const deleteText = await deleteRes.text();
+
+      if (!deleteRes.ok) {
+        log.warn(`Customer deletion failed: ${deleteText}`);
+        // Still return 200 to frontend, but log internally
       } else {
-        log.success(`Customer ${short} deleted successfully.`);
+        log.success(`Customer ${short} deleted successfully`);
       }
     }
 
-    log.success(
-      `Region ${regionDomain} deletion initiated.${
-        isInfra ? " Customer delete scheduled." : ""
-      }`
-    );
-
     return NextResponse.json({
-      message: `Region ${regionDomain} BURN sent successfully${
-        isInfra ? " and customer delete attempted." : ""
+      message: `Region ${regionDomain} deletion initiated.${
+        isInfra ? " Customer delete attempted." : ""
       }`,
     });
   } catch (error: unknown) {

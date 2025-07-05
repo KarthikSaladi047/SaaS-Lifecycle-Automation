@@ -31,9 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     const isInfra = regionName === "Infra";
-
     const regionPrefix = isInfra ? shortName : `${shortName}-${regionName}`;
-
     const regionDomain = `${regionPrefix}${selectedEnv.domain}`;
 
     const borkToken =
@@ -92,7 +90,12 @@ export async function POST(req: NextRequest) {
       log.error(
         `Upgrade failed (${upgradeResponse.statusCode}): ${upgradeResponse.body}`
       );
-      throw new Error("Region Upgrade failed");
+      return NextResponse.json(
+        {
+          error: `Upgrade failed (${upgradeResponse.statusCode}): ${upgradeResponse.body}`,
+        },
+        { status: upgradeResponse.statusCode }
+      );
     }
 
     return NextResponse.json({
