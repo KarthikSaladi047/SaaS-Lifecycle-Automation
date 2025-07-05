@@ -373,10 +373,10 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                             <button
                               onClick={() => setConfirmFQDN(region.fqdn)}
                               disabled={!region.task_state}
-                              className={`text-blue-600 hover:text-blue-800 cursor-pointer ${
+                              className={`text-blue-600 hover:text-blue-800 ${
                                 !region.task_state
                                   ? "opacity-50 cursor-not-allowed"
-                                  : ""
+                                  : "cursor-pointer"
                               }`}
                             >
                               ↻

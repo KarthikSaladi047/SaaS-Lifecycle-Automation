@@ -163,13 +163,13 @@ export default function ManagePCDPage() {
         case "addRegion":
           endpoint = "/api/createRegion";
           actionLabel = "Region addition";
-          responseMessage = `Region "${formData.regionName}" added to PCD "${formData.shortName}" successfully!`;
+          responseMessage = `New Region "${formData.regionName}" added to PCD "${formData.shortName}"!`;
           break;
 
         case "deleteRegion":
           endpoint = "/api/deleteRegion";
           actionLabel = "Region deletion";
-          responseMessage = `Region "${formData.regionName}" deleted from PCD "${formData.shortName}" initiated!`;
+          responseMessage = `Region "${formData.regionName}" deleted from PCD "${formData.shortName}"!`;
           break;
 
         case "updateLease":
