@@ -30,6 +30,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
   const currentEnvType = environmentOptions.find(
     (env) => env.value === environment
   )?.type;
+
   const isNonProd = currentEnvType !== "prod";
 
   const getTagColor = (tag: string) => {
@@ -105,6 +106,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
     }
   };
 
+  // Reset Task status
   const handleConfirm = () => {
     if (!confirmFQND) return;
     fetch(
@@ -124,7 +126,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
       .finally(() => setConfirmFQDN(null));
   };
 
-  // Export
+  // Export CSV
   const handleExport = () => {
     const csvRows = [
       [
@@ -186,13 +188,13 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
     document.body.removeChild(link);
   };
 
-  // Remove chart extension
+  // Chart extension Remover
   const getFilenameWithoutExtension = (url: string): string => {
     const filename = url?.split("/").pop() || "";
     return filename.includes(".") ? filename.split(".")[0] : filename;
   };
 
-  // searching
+  // search
   useEffect(() => {
     const currentEnv = localStorage.getItem("selectedEnv");
     const lastEnv = localStorage.getItem("lastEnvUsedForSearch");
@@ -242,40 +244,39 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
 
   useEffect(() => {
     const fetchAllHosts = async () => {
-      const uniqueFqdns = [
-        ...new Set(
-          data
-            .flatMap((group) => group.regions)
-            .filter((r) => r.region_name && r.region_name !== "Infra")
-            .map((r) => r.fqdn)
-        ),
-      ];
+      try {
+        const res = await fetch("/api/cortex/query?query=resmgr_host_up");
+        const json = await res.json();
+        const result = json?.data?.result || [];
 
-      const allData: Record<string, HostStatus[]> = {};
+        const grouped: Record<string, HostStatus[]> = {};
 
-      await Promise.all(
-        uniqueFqdns.map(async (fqdn) => {
-          try {
-            const res = await fetch(
-              `/api/cortex/query?query=${encodeURIComponent(
-                `resmgr_host_up{du="${fqdn}"}`
-              )}`
-            );
-            const json = await res.json();
-            allData[fqdn] = (json?.data?.result || []).map(
-              (entry: PrometheusResultEntry): HostStatus => ({
-                host_id: entry.metric.host_id || "N/A",
-                host_name: entry.metric.host_name || "N/A",
-                value: entry.value[1],
-              })
-            );
-          } catch {
-            allData[fqdn] = [];
-          }
-        })
-      );
+        result.forEach((entry: PrometheusResultEntry) => {
+          const fqdn = entry.metric.du;
+          if (!fqdn) return;
 
-      setHostDataMap(allData);
+          if (!grouped[fqdn]) grouped[fqdn] = [];
+
+          grouped[fqdn].push({
+            host_id: entry.metric.host_id || "N/A",
+            host_name: entry.metric.host_name || "N/A",
+            value: entry.value[1],
+          });
+        });
+
+        data
+          .flatMap((group) => group.regions)
+          .forEach((region) => {
+            const fqdn = region.fqdn;
+            if (region.region_name !== "Infra" && !grouped[fqdn]) {
+              grouped[fqdn] = [];
+            }
+          });
+
+        setHostDataMap(grouped);
+      } catch (err) {
+        console.error("Failed to fetch host data", err);
+      }
     };
 
     fetchAllHosts();
@@ -420,10 +421,10 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                     </td>
                     <td className="px-4 py-3 border border-gray-200">
                       {region.region_name === "Infra" ? (
-                        <span className="text-gray-400 italic">N/A</span>
+                        "N/A"
                       ) : hostDataMap[region.fqdn] ? (
                         hostDataMap[region.fqdn].length === 0 ? (
-                          <span className="text-black-400">0 / 0</span>
+                          "0 / 0"
                         ) : (
                           <button
                             onClick={() => handleHostClick(region.fqdn)}
@@ -438,7 +439,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                           </button>
                         )
                       ) : (
-                        "..."
+                        "0 / 0"
                       )}
                     </td>
 
