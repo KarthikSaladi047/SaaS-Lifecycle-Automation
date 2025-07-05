@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import NavBar from "../components/common_components/NavBar";
+import NavBar from "../components/common/NavBar";
 import { useSession } from "next-auth/react";
 import { CHARTS_CACHE_TTL, environmentOptions } from "../constants/pcd";
 
@@ -18,11 +18,11 @@ import {
 } from "../types/pcd";
 
 import { dbBackendOptions, tempusUrl } from "../constants/pcd";
-import StepSelect from "../components/control_panel_components/StepSelect";
-import SuccessMessage from "../components/control_panel_components/SucessMessage";
-import DynamicForm from "../components/control_panel_components/DynamicForm";
-import Joke from "../components/control_panel_components/Joke";
-import LoadingSpinner from "../components/common_components/LoadingSpinner";
+import StepSelect from "../components/control_panel/StepSelect";
+import SuccessMessage from "../components/control_panel/SucessMessage";
+import DynamicForm from "../components/control_panel/DynamicForm";
+import Joke from "../components/control_panel/Joke";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
 function setWithExpiry<T>(key: string, value: T, ttl: number): void {
   const now = new Date().getTime();
