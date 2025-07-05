@@ -1,6 +1,10 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { GroupedData } from "../../types/pcd";
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  GroupedData,
+  HostStatus,
+  PrometheusResultEntry,
+} from "../../types/pcd";
 import { environmentOptions, tagColors } from "@/app/constants/pcd";
 
 type TableProps = {
@@ -14,12 +18,92 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [tagInputs, setTagInputs] = useState<Record<string, string>>({});
-  const [localData, setLocalData] = useState<GroupedData[]>(data);
+  const [localData, setLocalData] = useState(data);
+  const [hostPopup, setHostPopup] = useState<{
+    fqdn: string;
+    result: HostStatus[];
+  } | null>(null);
+  const [hostDataMap, setHostDataMap] = useState<Record<string, HostStatus[]>>(
+    {}
+  );
+
   const currentEnvType = environmentOptions.find(
     (env) => env.value === environment
   )?.type;
-
   const isNonProd = currentEnvType !== "prod";
+
+  const getTagColor = (tag: string) => {
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) {
+      hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return tagColors[Math.abs(hash) % tagColors.length];
+  };
+
+  // Tags
+  const updateRegionTags = useCallback((fqdn: string, tags: string[]) => {
+    setLocalData((prev) =>
+      prev.map((group) => ({
+        ...group,
+        regions: group.regions.map((region) =>
+          region.fqdn === fqdn
+            ? {
+                ...region,
+                tags: tags.join(","),
+              }
+            : region
+        ),
+      }))
+    );
+  }, []);
+
+  const handleTagChange = async (
+    fqdn: string,
+    tag: string,
+    endpoint: string,
+    successMessage: string,
+    errorMessage: string
+  ) => {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ environment, fqdn, tag }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      updateRegionTags(fqdn, data.tags || []);
+      setToastMessage(successMessage);
+    } catch {
+      setToastMessage(errorMessage);
+    }
+  };
+
+  const handleAddTag = (fqdn: string, newTag: string) => {
+    const cleanTag = newTag.trim();
+    if (cleanTag) {
+      handleTagChange(
+        fqdn,
+        cleanTag,
+        "/api/addTag",
+        "Tag added successfully",
+        "Failed to add tag"
+      );
+    }
+  };
+
+  const handleRemoveTag = (fqdn: string, tag: string) => {
+    const cleanTag = tag.trim();
+    if (cleanTag) {
+      handleTagChange(
+        fqdn,
+        cleanTag,
+        "/api/removeTag",
+        "Tag removed",
+        "Failed to remove tag"
+      );
+    }
+  };
 
   const handleConfirm = () => {
     if (!confirmFQND) return;
@@ -29,97 +113,18 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
       )}`
     )
       .then((res) => {
-        if (!res.ok) throw new Error("Failed request");
+        if (!res.ok) throw new Error();
         return res.json();
       })
       .then(() => {
         setToastMessage("Task status is reset");
-        window.location.reload(); // Reload page to reflect changes
+        window.location.reload();
       })
       .catch(() => setToastMessage("Failed to reset task status"))
       .finally(() => setConfirmFQDN(null));
   };
 
-  // tag color selector
-  const getTagColor = (tag: string) => {
-    // Hash tag string to a number between 0 and tagColors.length - 1
-    let hash = 0;
-    for (let i = 0; i < tag.length; i++) {
-      hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const index = Math.abs(hash) % tagColors.length;
-    return tagColors[index];
-  };
-
-  // Add Tags
-  const handleAddTag = (fqdn: string, newTag: string) => {
-    const cleanTag = newTag.trim();
-
-    if (!cleanTag) return;
-
-    fetch("/api/addTag", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ environment, fqdn, tag: cleanTag }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to add tag");
-        return res.json();
-      })
-      .then((data) => {
-        setLocalData((prevData) =>
-          prevData.map((group) => ({
-            ...group,
-            regions: group.regions.map((region) =>
-              region.fqdn === fqdn
-                ? {
-                    ...region,
-                    tags: data.tags || [], // from server response
-                  }
-                : region
-            ),
-          }))
-        );
-        setToastMessage("Tag added successfully");
-      })
-      .catch(() => setToastMessage("Failed to add tag"));
-  };
-
-  // Remove Tags
-  const handleRemoveTag = (fqdn: string, tagToRemove: string) => {
-    const cleanTag = tagToRemove.trim();
-
-    if (!cleanTag) return;
-
-    fetch("/api/removeTag", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ environment, fqdn, tag: cleanTag }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to remove tag");
-        return res.json();
-      })
-      .then((data) => {
-        setLocalData((prevData) =>
-          prevData.map((group) => ({
-            ...group,
-            regions: group.regions.map((region) =>
-              region.fqdn === fqdn
-                ? {
-                    ...region,
-                    tags: data.tags || [], // use tags from backend
-                  }
-                : region
-            ),
-          }))
-        );
-        setToastMessage("Tag removed");
-      })
-      .catch(() => setToastMessage("Failed to remove tag"));
-  };
-
-  // Export CSV
+  // Export
   const handleExport = () => {
     const csvRows = [
       [
@@ -161,65 +166,57 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
       });
     });
 
-    const csvContent = csvRows
-      .map((e) => e.map((v) => `"${v}"`).join(","))
-      .join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob(
+      [
+        csvRows
+          .map((row) => row.map((cell) => `"${cell}"`).join(","))
+          .join("\n"),
+      ],
+      { type: "text/csv;charset=utf-8;" }
+    );
 
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `pcd-table-export-${Date.now()}.csv`);
-    link.style.visibility = "hidden";
+    const url = URL.createObjectURL(blob);
+    const link = Object.assign(document.createElement("a"), {
+      href: url,
+      download: `pcd-table-export-${Date.now()}.csv`,
+      style: "visibility:hidden",
+    });
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Chart name trimmer
+  // Remove chart extension
   const getFilenameWithoutExtension = (url: string): string => {
-    if (!url) return "";
-    const parts = url.split("/");
-    const filename = parts[parts.length - 1] || "";
-    const dotIndex = filename.lastIndexOf(".");
-    return dotIndex === -1 ? filename : filename.substring(0, dotIndex);
+    const filename = url?.split("/").pop() || "";
+    return filename.includes(".") ? filename.split(".")[0] : filename;
   };
 
-  // Search & Sorting
+  // searching
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
     const currentEnv = localStorage.getItem("selectedEnv");
     const lastEnv = localStorage.getItem("lastEnvUsedForSearch");
 
     if (currentEnv && currentEnv !== lastEnv) {
-      // Env has changed → clear search
       localStorage.removeItem("searchParameter");
       setSearchQuery("");
     } else {
-      // Same env → restore saved search
-      const savedSearch = localStorage.getItem("searchParameter");
-      if (savedSearch) setSearchQuery(savedSearch);
+      const saved = localStorage.getItem("searchParameter");
+      if (saved) setSearchQuery(saved);
     }
-
-    // Save this env for future comparison
-    if (currentEnv) {
-      localStorage.setItem("lastEnvUsedForSearch", currentEnv);
-    }
+    if (currentEnv) localStorage.setItem("lastEnvUsedForSearch", currentEnv);
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("searchParameter", searchQuery);
-    }
+    localStorage.setItem("searchParameter", searchQuery);
   }, [searchQuery]);
 
   const filteredData = localData
-    .map((customerGroup) => ({
-      ...customerGroup,
-      regions: customerGroup.regions.filter((region) => {
-        const allFields = [
-          customerGroup.customer,
+    .map((group) => ({
+      ...group,
+      regions: group.regions.filter((region) => {
+        const content = [
+          group.customer,
           region.region_name,
           region.namespace,
           region.task_state,
@@ -228,15 +225,68 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
           region.owner,
           region.use_du_specific_le_http_cert,
           region.lease_date,
-          customerEmails[customerGroup.customer] || "",
+          customerEmails[group.customer] || "",
           region.tags || "",
         ]
           .join(" ")
           .toLowerCase();
-        return allFields.includes(searchQuery.toLowerCase());
+        return content.includes(searchQuery.toLowerCase());
       }),
     }))
-    .filter((group) => group.regions.length > 0);
+    .filter((group) => group.regions.length);
+
+  // Host Details
+  const handleHostClick = (fqdn: string) => {
+    setHostPopup({ fqdn, result: hostDataMap[fqdn] || [] });
+  };
+
+  useEffect(() => {
+    const fetchAllHosts = async () => {
+      const uniqueFqdns = [
+        ...new Set(
+          data
+            .flatMap((group) => group.regions)
+            .filter((r) => r.region_name && r.region_name !== "Infra")
+            .map((r) => r.fqdn)
+        ),
+      ];
+
+      const allData: Record<string, HostStatus[]> = {};
+
+      await Promise.all(
+        uniqueFqdns.map(async (fqdn) => {
+          try {
+            const res = await fetch(
+              `/api/cortex/query?query=${encodeURIComponent(
+                `resmgr_host_up{du="${fqdn}"}`
+              )}`
+            );
+            const json = await res.json();
+            allData[fqdn] = (json?.data?.result || []).map(
+              (entry: PrometheusResultEntry): HostStatus => ({
+                host_id: entry.metric.host_id || "N/A",
+                host_name: entry.metric.host_name || "N/A",
+                value: entry.value[1],
+              })
+            );
+          } catch {
+            allData[fqdn] = [];
+          }
+        })
+      );
+
+      setHostDataMap(allData);
+    };
+
+    fetchAllHosts();
+  }, [data]);
+
+  useEffect(() => {
+    const onEsc = (e: KeyboardEvent) =>
+      e.key === "Escape" && setHostPopup(null);
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, []);
 
   return (
     <>
@@ -286,6 +336,9 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                 </th>
                 <th className="px-4 py-3 border border-gray-200 text-left">
                   Dataplane
+                </th>
+                <th className="px-4 py-3 border border-gray-200 text-left">
+                  Host Status
                 </th>
                 <th className="px-4 py-3 border border-gray-200 text-left">
                   Task State
@@ -365,6 +418,30 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                         .replace(/^.*?-/, "")
                         .replace(/\.app\..*$/, "")}
                     </td>
+                    <td className="px-4 py-3 border border-gray-200">
+                      {region.region_name === "Infra" ? (
+                        <span className="text-gray-400 italic">N/A</span>
+                      ) : hostDataMap[region.fqdn] ? (
+                        hostDataMap[region.fqdn].length === 0 ? (
+                          <span className="text-black-400">0 / 0</span>
+                        ) : (
+                          <button
+                            onClick={() => handleHostClick(region.fqdn)}
+                            className="text-blue-700 underline hover:text-blue-900 cursor-pointer"
+                          >
+                            {
+                              hostDataMap[region.fqdn].filter(
+                                (h) => h.value === "1"
+                              ).length
+                            }{" "}
+                            / {hostDataMap[region.fqdn].length}
+                          </button>
+                        )
+                      ) : (
+                        "..."
+                      )}
+                    </td>
+
                     <td className="px-4 py-3 border border-gray-200 capitalize">
                       <div className="flex items-center justify-between gap-2 relative group">
                         <span>{region.task_state}</span>
@@ -509,6 +586,71 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
           >
             ×
           </button>
+        </div>
+      )}
+      {/* Host Status */}
+      {hostPopup && (
+        <div className="fixed inset-0 z-50 bg-opacity-50 flex items-center justify-center">
+          <div className="bg-gray-300 rounded-2xl p-6 w-[90%] max-w-3xl shadow-2xl relative border border-gray-300">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800">
+              Host Status for{" "}
+              <span className="text-blue-600">{hostPopup.fqdn}</span>
+            </h2>
+
+            {hostPopup.result.length === 0 ? (
+              <p className="text-gray-500 text-center">No host data found.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="min-w-full text-sm bg-white">
+                  <thead className="bg-gray-100 text-gray-700 font-semibold">
+                    <tr>
+                      <th className="px-4 py-2 text-left border-b">Host ID</th>
+                      <th className="px-4 py-2 text-left border-b">
+                        Host Name
+                      </th>
+                      <th className="px-4 py-2 text-left border-b">
+                        Responding
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hostPopup.result.map((host, idx) => (
+                      <tr
+                        key={idx}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-4 py-2 border-b font-mono text-gray-700">
+                          {host.host_id}
+                        </td>
+                        <td className="px-4 py-2 border-b text-gray-800">
+                          {host.host_name}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          {host.value === "1" ? (
+                            <span className="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                              Yes
+                            </span>
+                          ) : (
+                            <span className="inline-block bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                              No
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <button
+              onClick={() => setHostPopup(null)}
+              className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-xl font-bold"
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
         </div>
       )}
     </>

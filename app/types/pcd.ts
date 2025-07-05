@@ -134,6 +134,21 @@ export interface GoogleIdToken {
   sub?: string;
 }
 
+export type HostStatus = {
+  host_id: string;
+  host_name: string;
+  value: string;
+};
+
+export type PrometheusResultEntry = {
+  metric: {
+    host_id?: string;
+    host_name?: string;
+    [key: string]: string | undefined;
+  };
+  value: [number, string]; // [timestamp, value]
+};
+
 // for cleanup
 export interface BorkRegion {
   customer_shortname: string;
