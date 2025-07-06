@@ -41,27 +41,29 @@ export async function GET(req: NextRequest) {
     "Basic " +
     Buffer.from(`${cortex_user}:${cortex_password}`).toString("base64");
 
+  const encodedQuery = encodeURIComponent(query);
+  const cortexQueryUrl = `${cortexUrl}/api/prom/api/v1/query?query=${encodedQuery}`;
+
   try {
-    const cortexRes = await fetch(
-      `${cortexUrl}/api/prom/api/v1/query?query=${encodeURIComponent(query)}`,
-      {
-        headers: {
-          Authorization: basicAuthHeader,
-        },
-      }
-    );
+    log.info(`Running Cortex query for env=${env}: ${query}`);
+
+    const cortexRes = await fetch(cortexQueryUrl, {
+      headers: {
+        Authorization: basicAuthHeader,
+      },
+    });
 
     const data = await cortexRes.json();
 
     if (!cortexRes.ok) {
-      log.error(`Cortex query failed with status ${cortexRes.status}`);
+      log.error(`Cortex query failed for env=${env}: ${query}`);
       return NextResponse.json(
         { error: data.error || "Cortex query failed" },
         { status: cortexRes.status }
       );
     }
 
-    log.info(`Cortex query succeeded for env=${env}`);
+    log.info(`Cortex query succeeded for env=${env}: ${query}`);
     return NextResponse.json(data);
   } catch (err) {
     log.error(
