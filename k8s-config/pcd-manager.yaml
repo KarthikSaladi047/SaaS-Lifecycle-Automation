@@ -31,6 +31,15 @@ stringData:
   eu-stage-bork-token: <TOKEN>
   us-dev-bork-token: <TOKEN>
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cortex-secret
+  namespace: pcd-manager
+type: Opaque
+stringData:
+  svc_cortex_pcd_dev_cortex_password: YOUR_CORTEX_PASSWORD
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

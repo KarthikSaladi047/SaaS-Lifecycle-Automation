@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   try {
     cortex_password = (
       await fs.readFile(
-        `/var/run/secrets/platform9/${cortex_user}-bork-token`,
+        `/var/run/secrets/platform9/${cortex_user}_cortex_password`,
         "utf8"
       )
     ).trim();
