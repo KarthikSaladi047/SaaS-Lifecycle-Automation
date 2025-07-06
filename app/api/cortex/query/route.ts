@@ -24,10 +24,7 @@ export async function GET(req: NextRequest) {
   let cortex_password: string;
   try {
     cortex_password = (
-      await fs.readFile(
-        `/var/run/secrets/platform9/${cortex_user}_cortex_password`,
-        "utf8"
-      )
+      await fs.readFile(`/var/run/secrets/platform9/${cortex_user}`, "utf8")
     ).trim();
   } catch (err) {
     return NextResponse.json(

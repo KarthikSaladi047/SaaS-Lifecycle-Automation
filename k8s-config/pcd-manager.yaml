@@ -38,7 +38,7 @@ metadata:
   namespace: pcd-manager
 type: Opaque
 stringData:
-  svc_cortex_pcd_dev_cortex_password: YOUR_CORTEX_PASSWORD
+  USERNAME: YOUR_CORTEX_PASSWORD
 ---
 apiVersion: apps/v1
 kind: Deployment
