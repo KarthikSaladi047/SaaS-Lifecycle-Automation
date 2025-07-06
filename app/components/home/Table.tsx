@@ -1,11 +1,18 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
   GroupedData,
   HostStatus,
   PrometheusResultEntry,
 } from "../../types/pcd";
-import { environmentOptions, tagColors } from "@/app/constants/pcd";
+import { environmentOptions } from "@/app/constants/pcd";
+import { getFilenameWithoutExtension } from "./utils";
+import HostStatusModal from "./HostStatusModal";
+import PodStatusModal from "./PodStatusModal";
+import ResetConfirmation from "./ResetConfirmation";
+import TagManager from "./TagManager";
+import SearchBar from "./SearchBar";
+import ExportButton from "./ExportButton";
 
 type TableProps = {
   data: GroupedData[];
@@ -40,81 +47,8 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
 
   const isNonProd = currentEnvType !== "prod";
 
-  const getTagColor = (tag: string) => {
-    let hash = 0;
-    for (let i = 0; i < tag.length; i++) {
-      hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return tagColors[Math.abs(hash) % tagColors.length];
-  };
-
-  // Tags
-  const updateRegionTags = useCallback((fqdn: string, tags: string[]) => {
-    setLocalData((prev) =>
-      prev.map((group) => ({
-        ...group,
-        regions: group.regions.map((region) =>
-          region.fqdn === fqdn
-            ? {
-                ...region,
-                tags: tags.join(","),
-              }
-            : region
-        ),
-      }))
-    );
-  }, []);
-
-  const handleTagChange = async (
-    fqdn: string,
-    tag: string,
-    endpoint: string,
-    successMessage: string,
-    errorMessage: string
-  ) => {
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ environment, fqdn, tag }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      updateRegionTags(fqdn, data.tags || []);
-      setToastMessage(successMessage);
-    } catch {
-      setToastMessage(errorMessage);
-    }
-  };
-
-  const handleAddTag = (fqdn: string, newTag: string) => {
-    const cleanTag = newTag.trim();
-    if (cleanTag) {
-      handleTagChange(
-        fqdn,
-        cleanTag,
-        "/api/addTag",
-        "Tag added successfully",
-        "Failed to add tag"
-      );
-    }
-  };
-
-  const handleRemoveTag = (fqdn: string, tag: string) => {
-    const cleanTag = tag.trim();
-    if (cleanTag) {
-      handleTagChange(
-        fqdn,
-        cleanTag,
-        "/api/removeTag",
-        "Tag removed",
-        "Failed to remove tag"
-      );
-    }
-  };
-
   // Reset Task status
-  const handleConfirm = () => {
+  const resetTaskStatus = () => {
     if (!confirmFQND) return;
     fetch(
       `/api/resetTaskStatus?env=${environment}&fqdn=${encodeURIComponent(
@@ -131,74 +65,6 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
       })
       .catch(() => setToastMessage("Failed to reset task status"))
       .finally(() => setConfirmFQDN(null));
-  };
-
-  // Export CSV
-  const handleExport = () => {
-    const csvRows = [
-      [
-        "Customer",
-        "Customer Email",
-        "Region",
-        "Namespace",
-        "FQDN",
-        "PCD Version",
-        "Dataplane",
-        "Task State",
-        "LE Certs?",
-        "Deployed At",
-        "Owner",
-        "Lease date",
-        "Renewals",
-        "Tags",
-      ],
-    ];
-
-    filteredData.forEach((customerGroup) => {
-      customerGroup.regions.forEach((region) => {
-        csvRows.push([
-          customerGroup.customer,
-          customerEmails[customerGroup.customer] || "N/A",
-          region.region_name,
-          region.namespace,
-          region.fqdn,
-          getFilenameWithoutExtension(region.chart_url),
-          region.cluster.replace(/^.*?-/, "").replace(/\.app\..*$/, ""),
-          region.task_state,
-          region.use_du_specific_le_http_cert,
-          new Date(region.deployed_at).toLocaleString(),
-          region.owner,
-          region.lease_date,
-          region.lease_counter,
-          region.tags,
-        ]);
-      });
-    });
-
-    const blob = new Blob(
-      [
-        csvRows
-          .map((row) => row.map((cell) => `"${cell}"`).join(","))
-          .join("\n"),
-      ],
-      { type: "text/csv;charset=utf-8;" }
-    );
-
-    const url = URL.createObjectURL(blob);
-    const link = Object.assign(document.createElement("a"), {
-      href: url,
-      download: `pcd-table-export-${Date.now()}.csv`,
-      style: "visibility:hidden",
-    });
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Chart extension Remover
-  const getFilenameWithoutExtension = (url: string): string => {
-    const filename = url?.split("/").pop() || "";
-    return filename.includes(".") ? filename.split(".")[0] : filename;
   };
 
   // search
@@ -358,30 +224,16 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
   return (
     <>
       <div className="flex justify-between items-center px-6 mb-2">
-        <div className="relative w-64">
-          <input
-            type="text"
-            placeholder="Search Anything..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-1 pr-8 border border-white text-white placeholder-balck bg-transparent rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-yellow-500"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white hover:text-yellow-400 text-sm"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        <button
-          onClick={handleExport}
-          className="ml-4 bg-green-700 hover:bg-yellow-700 text-white px-4 py-2 rounded shadow"
-        >
-          Export CSV
-        </button>
+        <SearchBar
+          searchQuery={searchQuery}
+          onChange={setSearchQuery}
+          onClear={() => setSearchQuery("")}
+        />
+        <ExportButton
+          filteredData={filteredData}
+          customerEmails={customerEmails}
+          env={environment}
+        />
       </div>
 
       <div className="overflow-x-auto p-6 bg-opacity-95">
@@ -592,54 +444,26 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                       </td>
                     )}
                     <td className="px-4 py-3 border border-gray-200">
-                      <div className="flex flex-wrap gap-1">
-                        {(Array.isArray(region.tags)
-                          ? region.tags
-                          : (region.tags || "")
-                              .split(",")
-                              .map((t) => t.trim())
-                              .filter(Boolean)
-                        ).map((tag, idx) => (
-                          <span
-                            key={idx}
-                            className={`${getTagColor(
-                              tag
-                            )} px-2 py-0.5 rounded-full text-xs flex items-center`}
-                          >
-                            {tag}
-                            <button
-                              onClick={() => handleRemoveTag(region.fqdn, tag)}
-                              className="ml-1 text-red-500 hover:text-red-700 text-xs"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                      <input
-                        type="text"
-                        value={tagInputs[region.namespace] || ""}
-                        onChange={(e) =>
+                      <TagManager
+                        tags={
+                          Array.isArray(region.tags)
+                            ? region.tags
+                            : (region.tags || "")
+                                .split(",")
+                                .map((t) => t.trim())
+                                .filter(Boolean)
+                        }
+                        fqdn={region.fqdn}
+                        tagInputValue={tagInputs[region.namespace] || ""}
+                        setTagInputValue={(val) =>
                           setTagInputs((prev) => ({
                             ...prev,
-                            [region.namespace]: e.target.value,
+                            [region.namespace]: val,
                           }))
                         }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const newTag = tagInputs[region.namespace]?.trim();
-                            if (newTag) {
-                              handleAddTag(region.fqdn, newTag);
-                              setTagInputs((prev) => ({
-                                ...prev,
-                                [region.namespace]: "",
-                              }));
-                            }
-                          }
-                        }}
-                        placeholder="Add tag & Enter"
-                        className="mt-1 text-xs w-full px-2 py-1"
+                        environment={environment}
+                        setToastMessage={setToastMessage}
+                        setLocalData={setLocalData}
                       />
                     </td>
                   </tr>
@@ -650,30 +474,13 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
+      {/* Task Reset Confirmation Modal */}
       {confirmFQND && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="bg-black text-white p-6 rounded-lg shadow-lg max-w-sm text-center space-y-4">
-            <p>
-              Do you want to reset task status of PCD{" "}
-              <strong>{confirmFQND}</strong>?
-            </p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={handleConfirm}
-                className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded"
-              >
-                Yes
-              </button>
-              <button
-                onClick={() => setConfirmFQDN(null)}
-                className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded"
-              >
-                No
-              </button>
-            </div>
-          </div>
-        </div>
+        <ResetConfirmation
+          onCancel={() => setConfirmFQDN(null)}
+          onConfirm={resetTaskStatus}
+          fqdn={confirmFQND}
+        />
       )}
 
       {/* Toast Message */}
@@ -690,222 +497,22 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
       )}
       {/* Host Status */}
       {hostPopup && (
-        <div className="fixed inset-0 z-50  flex items-center justify-center">
-          <div className="relative w-[90%] max-w-3xl">
-            {/* Close Button Outside Modal */}
-            <button
-              onClick={() => setHostPopup(null)}
-              className="absolute -top-4 -right-4 bg-white text-gray-800 hover:text-red-500 border rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-50"
-              title="Close"
-            >
-              ×
-            </button>
-
-            {/* Modal Box */}
-            <div className="bg-gray-300 rounded-2xl p-6 shadow-2xl max-h-[80vh] border border-gray-300 overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">
-                  Hosts in DU{" "}
-                  <span className="text-blue-600">{hostPopup.fqdn}</span>
-                </h2>
-
-                {/* Export Button */}
-                <button
-                  onClick={() => {
-                    const headers = ["Host ID", "Host Name", "Responding"];
-                    const rows = hostPopup.result.map((host) => [
-                      host.host_id,
-                      host.host_name,
-                      host.value === "1" ? "Yes" : "No",
-                    ]);
-
-                    const csvContent =
-                      "data:text/csv;charset=utf-8," +
-                      [headers, ...rows].map((e) => e.join(",")).join("\n");
-
-                    const encodedUri = encodeURI(csvContent);
-                    const link = document.createElement("a");
-                    link.setAttribute("href", encodedUri);
-                    link.setAttribute(
-                      "download",
-                      `host_status_${hostPopup.fqdn}.csv`
-                    );
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                  className="text-sm px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1"
-                  title="Download CSV"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              {hostPopup.result.length === 0 ? (
-                <p className="text-black text-center">No host data found.</p>
-              ) : (
-                <div className="overflow-x-auto rounded-lg border border-gray-200">
-                  <table className="min-w-full text-sm bg-white">
-                    <thead className="bg-gray-100 text-gray-700 font-semibold">
-                      <tr>
-                        <th className="px-4 py-2 text-left border-b">
-                          Host ID
-                        </th>
-                        <th className="px-4 py-2 text-left border-b">
-                          Host Name
-                        </th>
-                        <th className="px-4 py-2 text-left border-b">
-                          Responding
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {hostPopup.result.map((host, idx) => (
-                        <tr
-                          key={idx}
-                          className="hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="px-4 py-2 border-b font-mono text-gray-700">
-                            {host.host_id}
-                          </td>
-                          <td className="px-4 py-2 border-b text-gray-800">
-                            {host.host_name}
-                          </td>
-                          <td className="px-4 py-2 border-b">
-                            {host.value === "1" ? (
-                              <span className="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                                Yes
-                              </span>
-                            ) : (
-                              <span className="inline-block bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                                No
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <HostStatusModal
+          fqdn={hostPopup.fqdn}
+          result={hostPopup.result}
+          onClose={() => setHostPopup(null)}
+        />
       )}
 
       {/* Pod Status */}
       {podPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="relative w-[90%] max-w-3xl">
-            {/* Close button outside modal box */}
-            <button
-              onClick={() => setPodPopup(null)}
-              className="absolute -top-4 -right-4 bg-white text-gray-800 hover:text-red-500 border rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-50"
-              title="Close"
-            >
-              ×
-            </button>
-
-            {/* Modal box */}
-            <div className="bg-gray-300 rounded-lg p-6 shadow-xl max-h-[50vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">
-                  Pods in Namespace{" "}
-                  <span className="text-blue-600">{podPopup.namespace}</span>
-                </h2>
-
-                {/* Export CSV button */}
-                <button
-                  onClick={() => {
-                    const headers = ["Pod Name", "Phase"];
-                    const rows = podPopup.result.map((pod) => [
-                      pod.metric.pod,
-                      pod.metric.phase,
-                    ]);
-
-                    const csvContent =
-                      "data:text/csv;charset=utf-8," +
-                      [headers, ...rows].map((e) => e.join(",")).join("\n");
-
-                    const encodedUri = encodeURI(csvContent);
-                    const link = document.createElement("a");
-                    link.setAttribute("href", encodedUri);
-                    link.setAttribute(
-                      "download",
-                      `pod_status_${podPopup.namespace}.csv`
-                    );
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                  className="text-sm px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1"
-                  title="Download CSV"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              {podPopup.result.length === 0 ? (
-                <p className="text-gray-500">No pod data found.</p>
-              ) : (
-                <table className="w-full text-sm border bg-white border-gray-200">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="border p-2 text-left">Pod Name</th>
-                      <th className="border p-2 text-left">Phase</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {podPopup.result.map((pod, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="border p-2 font-mono">
-                          {pod.metric.pod}
-                        </td>
-                        <td
-                          className={`border p-2 font-semibold text-gray-800 ${
-                            pod.metric.phase === "Running"
-                              ? "bg-green-100 text-green-700"
-                              : pod.metric.phase === "Succeeded"
-                              ? "bg-orange-100 text-orange-400"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {pod.metric.phase}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
+        <>
+          <PodStatusModal
+            namespace={podPopup.namespace}
+            result={podPopup.result}
+            onClose={() => setPodPopup(null)}
+          />
+        </>
       )}
     </>
   );
