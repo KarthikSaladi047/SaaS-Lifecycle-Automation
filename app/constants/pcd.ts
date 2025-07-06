@@ -16,7 +16,7 @@ export const environmentOptions = [
     borkUrl: "https://bork.app.dev-pcd.platform9.com",
     type: "dev",
     domain: ".app.dev-pcd.platform9.com",
-    cortex: "https://pcd-dev.pf9cortex.platform9.net",
+    cortexUrl: "https://pcd-dev.pf9cortex.platform9.net",
     cortex_user: "svc_cortex_pcd_dev",
   },
   {
@@ -28,7 +28,7 @@ export const environmentOptions = [
     borkUrl: "https://bork.app.qa-pcd.platform9.com",
     type: "qa",
     domain: ".app.qa-pcd.platform9.com",
-    cortex: "https://pcd-qa.pf9cortex.platform9.net",
+    cortexUrl: "https://pcd-qa.pf9cortex.platform9.net",
     cortex_user: "svc_cortex_pcd_qa",
   },
   {
@@ -40,7 +40,7 @@ export const environmentOptions = [
     borkUrl: "https://bork.eu-central-1.app.staging-pcd.platform9.com",
     type: "stage",
     domain: ".app.staging-pcd.platform9.com",
-    cortex: "https://pcd-staging.pf9cortex.platform9.net",
+    cortexUrl: "https://pcd-staging.pf9cortex.platform9.net",
     cortex_user: "svc_cortex_pcd_staging",
   },
   {
@@ -52,7 +52,7 @@ export const environmentOptions = [
     borkUrl: "https://bork.app.staging-pcd.platform9.com",
     type: "stage",
     domain: ".app.staging-pcd.platform9.com",
-    cortex: "https://pcd-staging.pf9cortex.platform9.net",
+    cortexUrl: "https://pcd-staging.pf9cortex.platform9.net",
     cortex_user: "svc_cortex_pcd_staging",
   },
   {
@@ -64,7 +64,7 @@ export const environmentOptions = [
     borkUrl: "https://bork.eu-central-1.app.pcd.platform9.com",
     type: "prod",
     domain: ".app.pcd.platform9.com",
-    cortex: "https://pcd-prod.pf9cortex.platform9.net",
+    cortexUrl: "https://pcd-prod.pf9cortex.platform9.net",
     cortex_user: "svc_cortex_pcd_prod",
   },
   {
@@ -76,7 +76,7 @@ export const environmentOptions = [
     borkUrl: "https://bork.app.pcd.platform9.com",
     type: "prod",
     domain: ".app.pcd.platform9.com",
-    cortex: "https://pcd-prod.pf9cortex.platform9.net",
+    cortexUrl: "https://pcd-prod.pf9cortex.platform9.net",
     cortex_user: "svc_cortex_pcd_prod",
   },
 ];

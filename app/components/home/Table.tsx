@@ -251,7 +251,9 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
   useEffect(() => {
     const fetchAllHosts = async () => {
       try {
-        const res = await fetch("/api/cortex/query?query=resmgr_host_up");
+        const res = await fetch(
+          `/api/cortex/query?query=resmgr_host_up&env=${environment}`
+        );
         const json = await res.json();
         const result = json?.data?.result || [];
 
@@ -286,7 +288,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
     };
 
     fetchAllHosts();
-  }, [data]);
+  }, [environment, data]);
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
@@ -304,7 +306,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
     const fetchPods = async () => {
       try {
         const res = await fetch(
-          "/api/cortex/query?query=kube_pod_status_phase"
+          `/api/cortex/query?query=kube_pod_status_phase&env=${environment}`
         );
         const json = await res.json();
         const entries: PrometheusResultEntry[] = json?.data?.result || [];
@@ -326,7 +328,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
     };
 
     fetchPods();
-  }, []);
+  }, [environment]);
 
   const getPodsForNamespace = (
     allPods: PrometheusResultEntry[],

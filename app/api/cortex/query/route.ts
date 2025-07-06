@@ -1,27 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const CORTEX_URL = process.env.CORTEX_URL!;
-const CORTEX_USERNAME = process.env.CORTEX_USERNAME!;
-const CORTEX_PASSWORD = process.env.CORTEX_PASSWORD!;
-
-const basicAuthHeader =
-  "Basic " +
-  Buffer.from(`${CORTEX_USERNAME}:${CORTEX_PASSWORD}`).toString("base64");
+import { promises as fs } from "fs";
+import { environmentOptions } from "@/app/constants/pcd";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("query");
+  const env = searchParams.get("env");
 
-  if (!query) {
+  if (!query || !env) {
     return NextResponse.json(
-      { error: "Missing query parameter" },
+      { error: "Missing query or env parameter" },
       { status: 400 }
     );
   }
 
+  const selectedEnv = environmentOptions.find((e) => e.value === env);
+  if (!selectedEnv) {
+    return NextResponse.json({ error: "Invalid environment" }, { status: 400 });
+  }
+
+  const { cortexUrl, cortex_user } = selectedEnv;
+
+  let cortex_password: string;
+  try {
+    cortex_password = (
+      await fs.readFile(
+        `/var/run/secrets/platform9/${cortex_user}-bork-token`,
+        "utf8"
+      )
+    ).trim();
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error: "Failed to read cortex password",
+        details: (err as Error).message,
+      },
+      { status: 500 }
+    );
+  }
+
+  const basicAuthHeader =
+    "Basic " +
+    Buffer.from(`${cortex_user}:${cortex_password}`).toString("base64");
+
   try {
     const cortexRes = await fetch(
-      `${CORTEX_URL}/api/v1/query?query=${encodeURIComponent(query)}`,
+      `${cortexUrl}/api/v1/query?query=${encodeURIComponent(query)}`,
       {
         headers: {
           Authorization: basicAuthHeader,
@@ -46,10 +70,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
-/* 
-fetch('/api/cortex/query?query=' + encodeURIComponent(`resmgr_total_number_of_hosts{du="karthik-cse-ks-one.app.qa-pcd.platform9.com", host_type="all_hosts"}`))
-  .then(res => res.json())
-  .then(data => console.log(data))
-  .catch(console.error);
-  */
