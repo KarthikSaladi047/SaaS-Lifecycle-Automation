@@ -19,12 +19,13 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [tagInputs, setTagInputs] = useState<Record<string, string>>({});
   const [localData, setLocalData] = useState(data);
+  const [loadingPods, setLoadingPods] = useState(true);
   const [allPods, setAllPods] = useState<PrometheusResultEntry[]>([]);
   const [podPopup, setPodPopup] = useState<{
     namespace: string;
     result: PrometheusResultEntry[];
   } | null>(null);
-
+  const [loadingHosts, setLoadingHosts] = useState(true);
   const [hostDataMap, setHostDataMap] = useState<Record<string, HostStatus[]>>(
     {}
   );
@@ -249,6 +250,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
   };
 
   useEffect(() => {
+    setLoadingHosts(true);
     const fetchAllHosts = async () => {
       try {
         const res = await fetch(
@@ -284,39 +286,34 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
         setHostDataMap(grouped);
       } catch (err) {
         console.error("Failed to fetch host data", err);
+      } finally {
+        setLoadingHosts(false);
       }
     };
 
     fetchAllHosts();
   }, [environment, data]);
 
-  useEffect(() => {
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setHostPopup(null);
-        setPodPopup(null);
-      }
-    };
-    window.addEventListener("keydown", onEsc);
-    return () => window.removeEventListener("keydown", onEsc);
-  }, []);
-
   // Pod Status
   useEffect(() => {
     const fetchPods = async () => {
+      setLoadingPods(true);
       try {
+        const query = `kube_pod_status_phase{cluster=~".*dataplane.*"} == 1`;
+
         const res = await fetch(
-          `/api/cortex/query?query=kube_pod_status_phase&env=${environment}`
+          `/api/cortex/query?query=${encodeURIComponent(
+            query
+          )}&env=${environment}`
         );
         const json = await res.json();
         const entries: PrometheusResultEntry[] = json?.data?.result || [];
 
         const seen = new Set<string>();
         const currentPods = entries.filter((entry) => {
-          const isRunning = entry.value[1] === "1";
-          // Deduplication
+          // Deduplicate based on pod name
           const podName = entry.metric.pod;
-          if (!isRunning || seen.has(podName)) return false;
+          if (seen.has(podName)) return false;
           seen.add(podName);
           return true;
         });
@@ -324,6 +321,8 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
         setAllPods(currentPods);
       } catch (err) {
         console.error("Error fetching pods", err);
+      } finally {
+        setLoadingPods(false);
       }
     };
 
@@ -343,6 +342,18 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
         entry.metric.phase === "Running" || entry.metric.phase === "Succeeded"
     ).length;
   };
+
+  // Escap removes the modal
+  useEffect(() => {
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setHostPopup(null);
+        setPodPopup(null);
+      }
+    };
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, []);
 
   return (
     <>
@@ -480,6 +491,8 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                     <td className="px-4 py-3 border border-gray-200">
                       {region.region_name === "Infra" ? (
                         "N/A"
+                      ) : loadingHosts ? (
+                        <span className="text-gray-400">...</span>
                       ) : hostDataMap[region.fqdn] ? (
                         hostDataMap[region.fqdn].length === 0 ? (
                           "0 / 0"
@@ -501,31 +514,34 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                       )}
                     </td>
                     <td className="px-4 py-3 border border-gray-200">
-                      {(() => {
-                        const pods = getPodsForNamespace(
-                          allPods,
-                          region.namespace
-                        );
-                        const running = countRunningPods(pods);
+                      {loadingPods ? (
+                        <span className="text-gray-400">...</span>
+                      ) : (
+                        (() => {
+                          const pods = getPodsForNamespace(
+                            allPods,
+                            region.namespace
+                          );
+                          const running = countRunningPods(pods);
 
-                        if (pods.length === 0) return "0 / 0";
+                          if (pods.length === 0) return "0 / 0";
 
-                        return (
-                          <button
-                            onClick={() =>
-                              setPodPopup({
-                                namespace: region.namespace,
-                                result: pods,
-                              })
-                            }
-                            className="text-blue-700 hover:text-blue-900 cursor-pointer"
-                          >
-                            {running} / {pods.length}
-                          </button>
-                        );
-                      })()}
+                          return (
+                            <button
+                              onClick={() =>
+                                setPodPopup({
+                                  namespace: region.namespace,
+                                  result: pods,
+                                })
+                              }
+                              className="text-blue-700 hover:text-blue-900 cursor-pointer"
+                            >
+                              {running} / {pods.length}
+                            </button>
+                          );
+                        })()
+                      )}
                     </td>
-
                     <td className="px-4 py-3 border border-gray-200 capitalize">
                       <div className="flex items-center justify-between gap-2 relative group">
                         <span>{region.task_state}</span>
