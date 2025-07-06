@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const cortexRes = await fetch(
-      `${cortexUrl}/api/v1/query?query=${encodeURIComponent(query)}`,
+      `${cortexUrl}/api/prom/api/v1/query?query=${encodeURIComponent(query)}`,
       {
         headers: {
           Authorization: basicAuthHeader,
