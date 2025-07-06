@@ -4,14 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { environment, fqdn, tag, userEmail } = body;
+    const { environment, fqdn, tag } = body;
     const cleanTag = tag?.trim().toLowerCase();
-
-    if (userEmail) {
-      log.info(`Tag update requested by: ${userEmail}`);
-    } else {
-      log.warn("No userEmail provided in request body");
-    }
 
     if (!environment || !fqdn || !cleanTag) {
       log.warn(`Missing required fields. Body: ${JSON.stringify(body)}`);

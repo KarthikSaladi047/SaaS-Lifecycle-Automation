@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
-import { environmentOptions } from "@/app/constants/pcd";
+import { environmentOptions, log } from "@/app/constants/pcd";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   const env = searchParams.get("env");
 
   if (!query || !env) {
+    log.warn(`Missing query or env: query=${query}, env=${env}`);
     return NextResponse.json(
       { error: "Missing query or env parameter" },
       { status: 400 }
@@ -16,25 +17,22 @@ export async function GET(req: NextRequest) {
 
   const selectedEnv = environmentOptions.find((e) => e.value === env);
   if (!selectedEnv) {
+    log.error(`Invalid environment: ${env}`);
     return NextResponse.json({ error: "Invalid environment" }, { status: 400 });
   }
 
   const { cortexUrl, cortex_user } = selectedEnv;
+  const secretPath = `/var/run/secrets/platform9/cortex/${cortex_user}`;
 
   let cortex_password: string;
   try {
-    cortex_password = (
-      await fs.readFile(
-        `/var/run/secrets/platform9/cortex/${cortex_user}`,
-        "utf8"
-      )
-    ).trim();
+    cortex_password = (await fs.readFile(secretPath, "utf8")).trim();
   } catch (err) {
+    log.error(
+      `Failed to read secret for ${cortex_user}: ${(err as Error).message}`
+    );
     return NextResponse.json(
-      {
-        error: "Failed to read cortex password",
-        details: (err as Error).message,
-      },
+      { error: "Failed to read cortex password" },
       { status: 500 }
     );
   }
@@ -56,16 +54,21 @@ export async function GET(req: NextRequest) {
     const data = await cortexRes.json();
 
     if (!cortexRes.ok) {
+      log.error(`Cortex query failed with status ${cortexRes.status}`);
       return NextResponse.json(
         { error: data.error || "Cortex query failed" },
         { status: cortexRes.status }
       );
     }
 
+    log.info(`Cortex query succeeded for env=${env}`);
     return NextResponse.json(data);
   } catch (err) {
+    log.error(
+      `Unexpected error during Cortex query: ${(err as Error).message}`
+    );
     return NextResponse.json(
-      { error: "Internal server error", details: (err as Error).message },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
