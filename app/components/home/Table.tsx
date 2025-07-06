@@ -308,12 +308,23 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
         );
         const json = await res.json();
         const entries: PrometheusResultEntry[] = json?.data?.result || [];
-        const currentPods = entries.filter((entry) => entry.value[1] === "1");
+
+        const seen = new Set<string>();
+        const currentPods = entries.filter((entry) => {
+          const isRunning = entry.value[1] === "1";
+          // Deduplication
+          const podName = entry.metric.pod;
+          if (!isRunning || seen.has(podName)) return false;
+          seen.add(podName);
+          return true;
+        });
+
         setAllPods(currentPods);
       } catch (err) {
         console.error("Error fetching pods", err);
       }
     };
+
     fetchPods();
   }, []);
 
@@ -384,7 +395,7 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
                   Hosts
                 </th>
                 <th className="px-4 py-3 border border-gray-200 text-left">
-                  DU Pods
+                  Pods
                 </th>
                 <th className="px-4 py-3 border border-gray-200 text-left">
                   Task State
@@ -661,203 +672,220 @@ const Table: React.FC<TableProps> = ({ data, customerEmails, environment }) => {
       )}
       {/* Host Status */}
       {hostPopup && (
-        <div className="fixed inset-0 z-50 bg-opacity-50 flex items-center justify-center">
-          <div className="bg-gray-300 rounded-2xl p-6 w-[90%] max-w-3xl shadow-2xl max-h-[80vh] relative border border-gray-300 overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-800">
-                Hosts in DU{" "}
-                <span className="text-blue-600">{hostPopup.fqdn}</span>
-              </h2>
-              <button
-                onClick={() => {
-                  const headers = ["Host ID", "Host Name", "Responding"];
-                  const rows = hostPopup.result.map((host) => [
-                    host.host_id,
-                    host.host_name,
-                    host.value === "1" ? "Yes" : "No",
-                  ]);
-
-                  const csvContent =
-                    "data:text/csv;charset=utf-8," +
-                    [headers, ...rows].map((e) => e.join(",")).join("\n");
-
-                  const encodedUri = encodeURI(csvContent);
-                  const link = document.createElement("a");
-                  link.setAttribute("href", encodedUri);
-                  link.setAttribute(
-                    "download",
-                    `host_status_${hostPopup.fqdn}.csv`
-                  );
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-                className="text-sm px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1"
-                title="Download CSV"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {hostPopup.result.length === 0 ? (
-              <p className="text-black text-center">No host data found.</p>
-            ) : (
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="min-w-full text-sm bg-white">
-                  <thead className="bg-gray-100 text-gray-700 font-semibold">
-                    <tr>
-                      <th className="px-4 py-2 text-left border-b">Host ID</th>
-                      <th className="px-4 py-2 text-left border-b">
-                        Host Name
-                      </th>
-                      <th className="px-4 py-2 text-left border-b">
-                        Responding
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {hostPopup.result.map((host, idx) => (
-                      <tr
-                        key={idx}
-                        className="hover:bg-gray-50 transition-colors"
-                      >
-                        <td className="px-4 py-2 border-b font-mono text-gray-700">
-                          {host.host_id}
-                        </td>
-                        <td className="px-4 py-2 border-b text-gray-800">
-                          {host.host_name}
-                        </td>
-                        <td className="px-4 py-2 border-b">
-                          {host.value === "1" ? (
-                            <span className="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                              Yes
-                            </span>
-                          ) : (
-                            <span className="inline-block bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                              No
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
+        <div className="fixed inset-0 z-50  flex items-center justify-center">
+          <div className="relative w-[90%] max-w-3xl">
+            {/* Close Button Outside Modal */}
             <button
               onClick={() => setHostPopup(null)}
-              className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-xl font-bold"
-              aria-label="Close"
+              className="absolute -top-4 -right-4 bg-white text-gray-800 hover:text-red-500 border rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-50"
+              title="Close"
             >
               ×
             </button>
+
+            {/* Modal Box */}
+            <div className="bg-gray-300 rounded-2xl p-6 shadow-2xl max-h-[80vh] border border-gray-300 overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Hosts in DU{" "}
+                  <span className="text-blue-600">{hostPopup.fqdn}</span>
+                </h2>
+
+                {/* Export Button */}
+                <button
+                  onClick={() => {
+                    const headers = ["Host ID", "Host Name", "Responding"];
+                    const rows = hostPopup.result.map((host) => [
+                      host.host_id,
+                      host.host_name,
+                      host.value === "1" ? "Yes" : "No",
+                    ]);
+
+                    const csvContent =
+                      "data:text/csv;charset=utf-8," +
+                      [headers, ...rows].map((e) => e.join(",")).join("\n");
+
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute(
+                      "download",
+                      `host_status_${hostPopup.fqdn}.csv`
+                    );
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="text-sm px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1"
+                  title="Download CSV"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {hostPopup.result.length === 0 ? (
+                <p className="text-black text-center">No host data found.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="min-w-full text-sm bg-white">
+                    <thead className="bg-gray-100 text-gray-700 font-semibold">
+                      <tr>
+                        <th className="px-4 py-2 text-left border-b">
+                          Host ID
+                        </th>
+                        <th className="px-4 py-2 text-left border-b">
+                          Host Name
+                        </th>
+                        <th className="px-4 py-2 text-left border-b">
+                          Responding
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hostPopup.result.map((host, idx) => (
+                        <tr
+                          key={idx}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="px-4 py-2 border-b font-mono text-gray-700">
+                            {host.host_id}
+                          </td>
+                          <td className="px-4 py-2 border-b text-gray-800">
+                            {host.host_name}
+                          </td>
+                          <td className="px-4 py-2 border-b">
+                            {host.value === "1" ? (
+                              <span className="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                                Yes
+                              </span>
+                            ) : (
+                              <span className="inline-block bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                                No
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* Pod Status */}
       {podPopup && (
-        <div className="fixed inset-0 z-50  bg-opacity-40 flex items-center justify-center">
-          <div className="bg-gray-300 rounded-lg p-6 w-[90%] max-w-3xl shadow-xl relative max-h-[50vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">
-                Pods in Namespace{" "}
-                <span className="text-blue-600">{podPopup.namespace}</span>
-              </h2>
-              <button
-                onClick={() => {
-                  const headers = ["Pod Name", "Phase"];
-                  const rows = podPopup.result.map((pod) => [
-                    pod.metric.pod,
-                    pod.metric.phase,
-                  ]);
-
-                  const csvContent =
-                    "data:text/csv;charset=utf-8," +
-                    [headers, ...rows].map((e) => e.join(",")).join("\n");
-
-                  const encodedUri = encodeURI(csvContent);
-                  const link = document.createElement("a");
-                  link.setAttribute("href", encodedUri);
-                  link.setAttribute(
-                    "download",
-                    `pod_status_${podPopup.namespace}.csv`
-                  );
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-                className="text-sm px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1"
-                title="Download CSV"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {podPopup.result.length === 0 ? (
-              <p className="text-gray-500">No pod data found.</p>
-            ) : (
-              <table className="w-full text-sm border bg-white border-gray-200">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="border p-2 text-left">Pod Name</th>
-                    <th className="border p-2 text-left">Phase</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {podPopup.result.map((pod, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      <td className="border p-2 font-mono">{pod.metric.pod}</td>
-                      <td
-                        className={`border p-2 font-semibold text-gray-800 ${
-                          pod.metric.phase === "Running"
-                            ? "bg-green-100 text-green-700"
-                            : pod.metric.phase === "Succeeded"
-                            ? "bg-orange-100 text-orange-400"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {pod.metric.phase}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="relative w-[90%] max-w-3xl">
+            {/* Close button outside modal box */}
             <button
               onClick={() => setPodPopup(null)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-xl"
+              className="absolute -top-4 -right-4 bg-white text-gray-800 hover:text-red-500 border rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-50"
+              title="Close"
             >
               ×
             </button>
+
+            {/* Modal box */}
+            <div className="bg-gray-300 rounded-lg p-6 shadow-xl max-h-[50vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">
+                  Pods in Namespace{" "}
+                  <span className="text-blue-600">{podPopup.namespace}</span>
+                </h2>
+
+                {/* Export CSV button */}
+                <button
+                  onClick={() => {
+                    const headers = ["Pod Name", "Phase"];
+                    const rows = podPopup.result.map((pod) => [
+                      pod.metric.pod,
+                      pod.metric.phase,
+                    ]);
+
+                    const csvContent =
+                      "data:text/csv;charset=utf-8," +
+                      [headers, ...rows].map((e) => e.join(",")).join("\n");
+
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute(
+                      "download",
+                      `pod_status_${podPopup.namespace}.csv`
+                    );
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="text-sm px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1"
+                  title="Download CSV"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {podPopup.result.length === 0 ? (
+                <p className="text-gray-500">No pod data found.</p>
+              ) : (
+                <table className="w-full text-sm border bg-white border-gray-200">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="border p-2 text-left">Pod Name</th>
+                      <th className="border p-2 text-left">Phase</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {podPopup.result.map((pod, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="border p-2 font-mono">
+                          {pod.metric.pod}
+                        </td>
+                        <td
+                          className={`border p-2 font-semibold text-gray-800 ${
+                            pod.metric.phase === "Running"
+                              ? "bg-green-100 text-green-700"
+                              : pod.metric.phase === "Succeeded"
+                              ? "bg-orange-100 text-orange-400"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {pod.metric.phase}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       )}
