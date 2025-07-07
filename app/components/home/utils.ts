@@ -11,5 +11,5 @@ export const getTagColor = (tag: string) => {
 // Chart extension Remover
 export const getFilenameWithoutExtension = (url: string): string => {
   const filename = url?.split("/").pop() || "";
-  return filename.includes(".") ? filename.split(".")[0] : filename;
+  return filename.replace(/\.[^/.]+$/, "");
 };
