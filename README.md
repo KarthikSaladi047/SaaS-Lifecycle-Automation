@@ -119,10 +119,10 @@ K8s deployment with volume-mounted secrets
 
 HTTPS via Let's Encrypt
 
-Ingress and Service YAMLs provided. Check out [How_to_Deploy.md](https://github.com/KarthikSaladi-pf9/pcd_manager_hackathon/blob/main/How_to_Deploy.md) file.
+Ingress and Service YAMLs provided. Check out [k8s-config](https://github.com/KarthikSaladi047/SaaS-Lifecycle-Automation/blob/main/k8s-config/pcd-manager.yaml).
 
 ---
 
 ## 📬 Contact
 
-For issues, questions or feature requests, contact `ssaladi@platform9.com`
+For issues, questions or feature requests, contact `karthiksaladi047@gamil.com`
